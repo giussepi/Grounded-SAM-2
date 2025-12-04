@@ -4,8 +4,11 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 import os
+from pathlib import Path
 
+import distutils.text_file
 from setuptools import find_packages, setup
+
 
 # Package metadata
 NAME = "grounded_sam_2"
@@ -20,16 +23,10 @@ LICENSE = "Apache 2.0"
 with open("README.md", "r", encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
-# Required dependencies
-REQUIRED_PACKAGES = [
-    "torch>=2.3.1",
-    "torchvision>=0.18.1",
-    "numpy>=1.24.4",
-    "tqdm>=4.66.1",
-    "hydra-core>=1.3.2",
-    "iopath>=0.1.10",
-    "pillow>=9.4.0",
-]
+def _parse_requirements(filename: str) -> list[str]:
+    """Return requirements from requirements file."""
+    # Ref: https://stackoverflow.com/a/42033122/
+    return distutils.text_file.TextFile(filename=str(Path(__file__).with_name(filename))).readlines()
 
 EXTRA_PACKAGES = {
     "notebooks": [
@@ -186,7 +183,7 @@ setup(
     license=LICENSE,
     packages=find_packages(exclude="notebooks"),
     include_package_data=True,
-    install_requires=REQUIRED_PACKAGES,
+    install_requires=_parse_requirements('requirements.txt'),
     extras_require=EXTRA_PACKAGES,
     python_requires=">=3.12",
     ext_modules=get_extensions(),
