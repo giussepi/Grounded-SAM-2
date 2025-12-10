@@ -23,9 +23,9 @@ Grounded SAM 2 does not introduce significant methodological changes compared to
 1. Install CUDA>=12.1 and set the environment variable properly. E.g. `export CUDA_HOME=/path/to/cuda-12.1/`
 2. Install PyTorch>=3.10 and torchvision>=0.18.1 with CUDA support following the [Pytorch installation instructions](https://pytorch.org/get-started/locally/).
 3. Install it via PIP
-  ```
-  pip install https://github.com/giussepi/Grounded-SAM-2/tarball/packaged --no-cache-dir
-  ```
+   ```
+   pip install https://github.com/giussepi/Grounded-SAM-2/tarball/packaged --no-cache-dir
+   ```
 4. Open a python shell and download the pretrained weights by importing the following modules:
    ```
    from grounded_sam_2 import download_pretrained_sam2
