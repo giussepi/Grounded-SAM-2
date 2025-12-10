@@ -182,6 +182,9 @@ setup(
     author_email=AUTHOR_EMAIL,
     license=LICENSE,
     packages=find_packages(exclude="notebooks"),
+    package_data={
+        NAME: ['*.*'], # including all non-python files
+    },
     include_package_data=True,
     install_requires=_parse_requirements('requirements.txt'),
     extras_require=EXTRA_PACKAGES,
