@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/dataset/vos_raw_dataset.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -19,7 +22,7 @@ from iopath.common.file_io import g_pathmgr
 
 from omegaconf.listconfig import ListConfig
 
-from training.dataset.vos_segment_loader import (
+from grounded_sam_2.training.dataset.vos_segment_loader import (
     JSONSegmentLoader,
     MultiplePNGSegmentLoader,
     PalettisedPNGSegmentLoader,

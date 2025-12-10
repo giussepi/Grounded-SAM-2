@@ -9,6 +9,8 @@ build/*
 _C.*
 outputs/*
 checkpoints/*.pt
+grounded_sam_2/checkpoints/*.pt
+grounded_sam_2/gdino_checkpoints/*.pth
 *test*
 # Byte-compiled / optimized / DLL files
 __pycache__/

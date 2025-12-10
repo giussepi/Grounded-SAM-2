@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/tools/vos_inference.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -11,7 +14,8 @@ from collections import defaultdict
 import numpy as np
 import torch
 from PIL import Image
-from sam2.build_sam import build_sam2_video_predictor
+
+from grounded_sam_2.sam2.build_sam import build_sam2_video_predictor
 
 
 # the PNG palette for DAVIS 2017 dataset

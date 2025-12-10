@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/groundingdino/datasets/cocogrounding_eval.py """
+
 # ------------------------------------------------------------------------
 # Grounding DINO. Midified by Shilong Liu.
 # url: https://github.com/IDEA-Research/GroundingDINO
@@ -23,7 +26,7 @@ import torch
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-from groundingdino.util.misc import all_gather
+from grounded_sam_2.grounding_dino.groundingdino.util.misc import all_gather
 
 
 class CocoGroundingEvaluator(object):

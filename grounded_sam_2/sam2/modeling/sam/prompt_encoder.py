@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/sam/prompt_encoder.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -9,9 +12,8 @@ from typing import Optional, Tuple, Type
 import torch
 from torch import nn
 
-from sam2.modeling.position_encoding import PositionEmbeddingRandom
-
-from sam2.modeling.sam2_utils import LayerNorm2d
+from grounded_sam_2.sam2.modeling.position_encoding import PositionEmbeddingRandom
+from grounded_sam_2.sam2.modeling.sam2_utils import LayerNorm2d
 
 
 class PromptEncoder(nn.Module):

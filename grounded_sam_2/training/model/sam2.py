@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/model/sam2.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -9,17 +12,16 @@ import logging
 import numpy as np
 import torch
 import torch.distributed
-from sam2.modeling.sam2_base import SAM2Base
-from sam2.modeling.sam2_utils import (
+
+from grounded_sam_2.sam2.modeling.sam2_base import SAM2Base
+from grounded_sam_2.sam2.modeling.sam2_utils import (
     get_1d_sine_pe,
     get_next_point,
     sample_box_points,
     select_closest_cond_frames,
 )
-
-from sam2.utils.misc import concat_points
-
-from training.utils.data_utils import BatchedVideoDatapoint
+from grounded_sam_2.sam2.utils.misc import concat_points
+from grounded_sam_2.training.utils.data_utils import BatchedVideoDatapoint
 
 
 class SAM2Train(SAM2Base):

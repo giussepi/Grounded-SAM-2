@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/sam2_image_predictor.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -12,9 +15,8 @@ import numpy as np
 import torch
 from PIL.Image import Image
 
-from sam2.modeling.sam2_base import SAM2Base
-
-from sam2.utils.transforms import SAM2Transforms
+from grounded_sam_2.sam2.modeling.sam2_base import SAM2Base
+from grounded_sam_2.sam2.utils.transforms import SAM2Transforms
 
 
 class SAM2ImagePredictor:

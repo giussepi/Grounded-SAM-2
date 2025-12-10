@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/sam/mask_decoder.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -9,7 +12,7 @@ from typing import List, Optional, Tuple, Type
 import torch
 from torch import nn
 
-from sam2.modeling.sam2_utils import LayerNorm2d, MLP
+from grounded_sam_2.sam2.modeling.sam2_utils import LayerNorm2d, MLP
 
 
 class MaskDecoder(nn.Module):

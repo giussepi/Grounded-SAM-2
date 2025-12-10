@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/sam2_base.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -10,10 +13,10 @@ import torch.nn.functional as F
 
 from torch.nn.init import trunc_normal_
 
-from sam2.modeling.sam.mask_decoder import MaskDecoder
-from sam2.modeling.sam.prompt_encoder import PromptEncoder
-from sam2.modeling.sam.transformer import TwoWayTransformer
-from sam2.modeling.sam2_utils import get_1d_sine_pe, MLP, select_closest_cond_frames
+from grounded_sam_2.sam2.modeling.sam.mask_decoder import MaskDecoder
+from grounded_sam_2.sam2.modeling.sam.prompt_encoder import PromptEncoder
+from grounded_sam_2.sam2.modeling.sam.transformer import TwoWayTransformer
+from grounded_sam_2.sam2.modeling.sam2_utils import get_1d_sine_pe, MLP, select_closest_cond_frames
 
 # a large negative value as a placeholder score for missing objects
 NO_OBJ_SCORE = -1024.0

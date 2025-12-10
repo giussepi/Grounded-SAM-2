@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/utils/logger.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -19,7 +22,7 @@ from numpy import ndarray
 from torch import Tensor
 from torch.utils.tensorboard import SummaryWriter
 
-from training.utils.train_utils import get_machine_local_and_dist_rank, makedir
+from grounded_sam_2.training.utils.train_utils import get_machine_local_and_dist_rank, makedir
 
 Scalar = Union[Tensor, ndarray, int, float]
 

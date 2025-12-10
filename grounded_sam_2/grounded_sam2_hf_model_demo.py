@@ -1,18 +1,24 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounded_sam2_hf_model_demo.py """
+
 import argparse
-import os
-import cv2
 import json
-import torch
+import os
+
+import cv2
 import numpy as np
 import supervision as sv
 import pycocotools.mask as mask_util
+import torch
 from pathlib import Path
-from supervision.draw.color import ColorPalette
-from utils.supervision_utils import CUSTOM_COLOR_MAP
 from PIL import Image
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
+from supervision.draw.color import ColorPalette
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection 
+
+from grounded_sam_2.sam2.build_sam import build_sam2
+from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
+from grounded_sam_2.utils.supervision_utils import CUSTOM_COLOR_MAP
+
 
 """
 Hyper parameters

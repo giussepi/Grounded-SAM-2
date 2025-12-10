@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/demo/inference_on_a_image.py """
+
 import argparse
 import os
 import sys
@@ -6,12 +9,12 @@ import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFont
 
-import groundingdino.datasets.transforms as T
-from groundingdino.models import build_model
-from groundingdino.util import box_ops
-from groundingdino.util.slconfig import SLConfig
-from groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
-from groundingdino.util.vl_utils import create_positive_map_from_span
+import grounded_sam_2.groundingdino.datasets.transforms as T
+from grounded_sam_2.groundingdino.models import build_model
+from grounded_sam_2.groundingdino.util import box_ops
+from grounded_sam_2.groundingdino.util.slconfig import SLConfig
+from grounded_sam_2.groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
+from grounded_sam_2.groundingdino.util.vl_utils import create_positive_map_from_span
 
 
 def plot_boxes_to_image(image_pil, tgt):

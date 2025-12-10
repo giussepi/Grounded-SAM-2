@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/groundingdino/models/GroundingDINO/backbone/backbone.py """
+
 # ------------------------------------------------------------------------
 # Grounding DINO
 # url: https://github.com/IDEA-Research/GroundingDINO
@@ -24,7 +27,7 @@ import torchvision
 from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 
-from grounding_dino.groundingdino.util.misc import NestedTensor, clean_state_dict, is_main_process
+from grounded_sam_2.grounding_dino.groundingdino.util.misc import NestedTensor, clean_state_dict, is_main_process
 
 from .position_encoding import build_position_encoding
 from .swin_transformer import build_swin_transformer

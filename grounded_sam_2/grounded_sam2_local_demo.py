@@ -1,15 +1,20 @@
-import os
-import cv2
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounded_sam2_local_demo.py """
+
 import json
-import torch
+import os
+
+import cv2
 import numpy as np
 import supervision as sv
+import torch
 import pycocotools.mask as mask_util
 from pathlib import Path
 from torchvision.ops import box_convert
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-from grounding_dino.groundingdino.util.inference import load_model, load_image, predict
+
+from grounded_sam_2.grounding_dino.groundingdino.util.inference import load_model, load_image, predict
+from grounded_sam_2.sam2.build_sam import build_sam2
+from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
 
 """
 Hyper parameters

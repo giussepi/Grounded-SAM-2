@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
+grounded_sam_2/grounding_dino/groundingdino/datasets/transforms.py
+
 Transforms and data augmentation for both image + bbox.
 """
 import os
@@ -10,8 +13,8 @@ import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as F
 
-from grounding_dino.groundingdino.util.box_ops import box_xyxy_to_cxcywh
-from grounding_dino.groundingdino.util.misc import interpolate
+from grounded_sam_2.grounding_dino.groundingdino.util.box_ops import box_xyxy_to_cxcywh
+from grounded_sam_2.grounding_dino.groundingdino.util.misc import interpolate
 
 
 def crop(image, target, region):

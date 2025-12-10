@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/demo/create_coco_dataset.py """
+
 import typer
-from groundingdino.util.inference import load_model, load_image, predict
+from grounded_sam_2.groundingdino.util.inference import load_model, load_image, predict
 from tqdm import tqdm
 import torchvision
 import torch

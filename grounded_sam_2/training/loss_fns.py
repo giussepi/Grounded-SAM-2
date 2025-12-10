@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/loss_fns.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -12,9 +15,8 @@ import torch.distributed
 import torch.nn as nn
 import torch.nn.functional as F
 
-from training.trainer import CORE_LOSS_KEY
-
-from training.utils.distributed import get_world_size, is_dist_avail_and_initialized
+from grounded_sam_2.training.trainer import CORE_LOSS_KEY
+from grounded_sam_2.training.utils.distributed import get_world_size, is_dist_avail_and_initialized
 
 
 def dice_loss(inputs, targets, num_objects, loss_on_multimask=False):

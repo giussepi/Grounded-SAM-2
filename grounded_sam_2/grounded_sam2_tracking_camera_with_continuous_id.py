@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounded_sam2_tracking_camera_with_continuous_id.py """
+
 import copy
 import os
 
@@ -6,13 +9,14 @@ import numpy as np
 import supervision as sv
 import torch
 from PIL import Image
-from sam2.build_sam import build_sam2, build_sam2_video_predictor
-from sam2.sam2_image_predictor import SAM2ImagePredictor
 from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
-from utils.common_utils import CommonUtils
-from utils.mask_dictionary_model import MaskDictionaryModel, ObjectInfo
-from utils.track_utils import sample_points_from_masks
-from utils.video_utils import create_video_from_images
+
+from grounded_sam_2.sam2.build_sam import build_sam2, build_sam2_video_predictor
+from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
+from grounded_sam_2.utils.common_utils import CommonUtils
+from grounded_sam_2.utils.mask_dictionary_model import MaskDictionaryModel, ObjectInfo
+from grounded_sam_2.utils.track_utils import sample_points_from_masks
+from grounded_sam_2.utils.video_utils import create_video_from_images
 
 # Setup environment
 torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()

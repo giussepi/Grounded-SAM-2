@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""grounded_sam_2/grounded_sam2_gd1.5_demo.py  """
+
 # dds cloudapi for Grounding DINO 1.5 - update to V2Task API
 from dds_cloudapi_sdk import Config
 from dds_cloudapi_sdk import Client
@@ -13,8 +16,9 @@ import supervision as sv
 import pycocotools.mask as mask_util
 from pathlib import Path
 from PIL import Image
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
+
+from grounded_sam_2.sam2.build_sam import build_sam2
+from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
 
 """
 Hyper parameters

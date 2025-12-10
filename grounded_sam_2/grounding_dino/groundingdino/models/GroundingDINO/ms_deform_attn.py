@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/groundingdino/models/GroundingDINO/ms_deform_attn.py """
+
 # ------------------------------------------------------------------------
 # Grounding DINO
 # url: https://github.com/IDEA-Research/GroundingDINO
@@ -26,7 +29,7 @@ from torch.autograd.function import once_differentiable
 from torch.nn.init import constant_, xavier_uniform_
 
 try:
-    from grounding_dino.groundingdino import _C
+    from grounded_sam_2.grounding_dino.groundingdino import _C
 except:
     warnings.warn("Failed to load custom C++ ops. Running on CPU mode Only!")
 

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/sam2_utils.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -13,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from sam2.utils.misc import mask_to_box
+from grounded_sam_2.sam2.utils.misc import mask_to_box
 
 
 def select_closest_cond_frames(frame_idx, cond_frame_outputs, max_cond_frame_num):

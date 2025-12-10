@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/automatic_mask_generator.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -11,9 +14,9 @@ import numpy as np
 import torch
 from torchvision.ops.boxes import batched_nms, box_area  # type: ignore
 
-from sam2.modeling.sam2_base import SAM2Base
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-from sam2.utils.amg import (
+from grounded_sam_2.sam2.modeling.sam2_base import SAM2Base
+from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
+from grounded_sam_2.sam2.utils.amg import (
     area_from_rle,
     batch_iterator,
     batched_mask_to_box,

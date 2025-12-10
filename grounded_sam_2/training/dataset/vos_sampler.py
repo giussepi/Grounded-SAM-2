@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/dataset/vos_sampler.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -8,7 +11,7 @@ import random
 from dataclasses import dataclass
 from typing import List
 
-from training.dataset.vos_segment_loader import LazySegments
+from grounded_sam_2.training.dataset.vos_segment_loader import LazySegments
 
 MAX_RETRIES = 1000
 

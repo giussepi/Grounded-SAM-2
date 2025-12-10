@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/sam2_video_predictor.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -8,11 +11,10 @@ import warnings
 from collections import OrderedDict
 
 import torch
-
 from tqdm import tqdm
 
-from sam2.modeling.sam2_base import NO_OBJ_SCORE, SAM2Base
-from sam2.utils.misc import concat_points, fill_holes_in_mask_scores, load_video_frames ,process_stream_frame
+from grounded_sam_2.sam2.modeling.sam2_base import NO_OBJ_SCORE, SAM2Base
+from grounded_sam_2.sam2.utils.misc import concat_points, fill_holes_in_mask_scores, load_video_frames ,process_stream_frame
 
 
 class SAM2VideoPredictor(SAM2Base):

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/groundingdino/models/GroundingDINO/transformer.py """
+
 # ------------------------------------------------------------------------
 # Grounding DINO
 # url: https://github.com/IDEA-Research/GroundingDINO
@@ -22,7 +25,7 @@ import torch
 import torch.utils.checkpoint as checkpoint
 from torch import Tensor, nn
 
-from grounding_dino.groundingdino.util.misc import inverse_sigmoid
+from grounded_sam_2.grounding_dino.groundingdino.util.misc import inverse_sigmoid
 
 from .fuse_modules import BiAttentionBlock
 from .ms_deform_attn import MultiScaleDeformableAttention as MSDeformAttn

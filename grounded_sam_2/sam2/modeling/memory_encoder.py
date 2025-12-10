@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/memory_encoder.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -11,7 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from sam2.modeling.sam2_utils import DropPath, get_clones, LayerNorm2d
+from grounded_sam_2.sam2.modeling.sam2_utils import DropPath, get_clones, LayerNorm2d
 
 
 class MaskDownSampler(nn.Module):

@@ -1,14 +1,19 @@
-import os
-import cv2
-import torch
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounded_sam2_florence2_autolabel_pipeline.py """
+
 import argparse
+import os
+
+import cv2
 import numpy as np
 import supervision as sv
+import torch
 from PIL import Image
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
 from transformers import AutoProcessor, AutoModelForCausalLM
-from utils.supervision_utils import CUSTOM_COLOR_MAP
+
+from grounded_sam_2.sam2.build_sam import build_sam2
+from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
+from grounded_sam_2.utils.supervision_utils import CUSTOM_COLOR_MAP
 
 """
 Define Some Hyperparam

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/backbones/hieradet.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -13,13 +16,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from iopath.common.file_io import g_pathmgr
 
-from sam2.modeling.backbones.utils import (
+from grounded_sam_2.sam2.modeling.backbones.utils import (
     PatchEmbed,
     window_partition,
     window_unpartition,
 )
 
-from sam2.modeling.sam2_utils import DropPath, MLP
+from grounded_sam_2.sam2.modeling.sam2_utils import DropPath, MLP
 
 
 def do_pool(x: torch.Tensor, pool: nn.Module, norm: nn.Module = None) -> torch.Tensor:

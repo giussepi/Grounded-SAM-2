@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/sam2/modeling/sam/transformer.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -14,9 +17,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
 
-from sam2.modeling.position_encoding import apply_rotary_enc, compute_axial_cis
-from sam2.modeling.sam2_utils import MLP
-from sam2.utils.misc import get_sdpa_settings
+from grounded_sam_2.sam2.modeling.position_encoding import apply_rotary_enc, compute_axial_cis
+from grounded_sam_2.sam2.modeling.sam2_utils import MLP
+from grounded_sam_2.sam2.utils.misc import get_sdpa_settings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 # Check whether Flash Attention is available (and use it by default)

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/dataset/transforms.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -18,10 +21,9 @@ import torchvision.transforms as T
 import torchvision.transforms.functional as F
 import torchvision.transforms.v2.functional as Fv2
 from PIL import Image as PILImage
-
 from torchvision.transforms import InterpolationMode
 
-from training.utils.data_utils import VideoDatapoint
+from grounded_sam_2.training.utils.data_utils import VideoDatapoint
 
 
 def hflip(datapoint, index):

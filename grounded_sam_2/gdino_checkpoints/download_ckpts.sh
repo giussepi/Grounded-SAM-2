@@ -9,16 +9,26 @@
 
 # Define the URLs for the checkpoints
 BASE_URL="https://github.com/IDEA-Research/GroundingDINO/releases/download/"
-swint_ogc_url="${BASE_URL}v0.1.0-alpha/groundingdino_swint_ogc.pth"
-swinb_cogcoor_url="${BASE_URL}v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth"
+ogc_file="groundingdino_swint_ogc.pth"
+swint_ogc_url="${BASE_URL}v0.1.0-alpha/${ogc_file}"
+cogcoor_file="groundingdino_swinb_cogcoor.pth"
+swinb_cogcoor_url="${BASE_URL}v0.1.0-alpha2/${cogcoor_file}"
 
 
 
-# Download each of the four checkpoints using wget
-echo "Downloading groundingdino_swint_ogc.pth checkpoint..."
-wget $swint_ogc_url || { echo "Failed to download checkpoint from $swint_ogc_url"; exit 1; }
+# Download checkpoints using wget
+if ! [ -f ./$ogc_file ]; then
+    echo "Downloading ${ogc_file} checkpoint..."
+    wget $swint_ogc_url || { echo "Failed to download checkpoint from $swint_ogc_url"; exit 1; }
+else
+    echo "${ogc_file} already exists; not retrieving"
+fi
 
-echo "Downloading groundingdino_swinb_cogcoor.pth checkpoint..."
-wget $swinb_cogcoor_url || { echo "Failed to download checkpoint from $swinb_cogcoor_url"; exit 1; }
+if ! [ -f ./$cogcoor_file ]; then
+    echo "Downloading ${cogcoor_file} checkpoint..."
+    wget $swinb_cogcoor_url || { echo "Failed to download checkpoint from $swinb_cogcoor_url"; exit 1; }
+else
+    echo "${cogcoor_file} already exists; not retrieving"
+fi
 
 echo "All checkpoints are downloaded successfully."

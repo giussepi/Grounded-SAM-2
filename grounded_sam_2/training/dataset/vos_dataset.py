@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/dataset/vos_dataset.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -15,11 +18,10 @@ from iopath.common.file_io import g_pathmgr
 from PIL import Image as PILImage
 from torchvision.datasets.vision import VisionDataset
 
-from training.dataset.vos_raw_dataset import VOSRawDataset
-from training.dataset.vos_sampler import VOSSampler
-from training.dataset.vos_segment_loader import JSONSegmentLoader
-
-from training.utils.data_utils import Frame, Object, VideoDatapoint
+from grounded_sam_2.training.dataset.vos_raw_dataset import VOSRawDataset
+from grounded_sam_2.training.dataset.vos_sampler import VOSSampler
+from grounded_sam_2.training.dataset.vos_segment_loader import JSONSegmentLoader
+from grounded_sam_2.training.utils.data_utils import Frame, Object, VideoDatapoint
 
 MAX_RETRIES = 100
 

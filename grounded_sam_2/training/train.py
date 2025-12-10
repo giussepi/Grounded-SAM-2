@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/training/train.py """
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -20,7 +23,7 @@ from hydra.utils import instantiate
 from iopath.common.file_io import g_pathmgr
 from omegaconf import OmegaConf
 
-from training.utils.train_utils import makedir, register_omegaconf_resolvers
+from grounded_sam_2.training.utils.train_utils import makedir, register_omegaconf_resolvers
 
 os.environ["HYDRA_FULL_ERROR"] = "1"
 

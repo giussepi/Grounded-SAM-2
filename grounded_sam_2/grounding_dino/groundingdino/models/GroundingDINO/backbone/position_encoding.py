@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" grounded_sam_2/grounding_dino/groundingdino/models/GroundingDINO/backbone/position_encoding.py """
+
 # ------------------------------------------------------------------------
 # Grounding DINO
 # url: https://github.com/IDEA-Research/GroundingDINO
@@ -24,7 +27,7 @@ import math
 import torch
 from torch import nn
 
-from grounding_dino.groundingdino.util.misc import NestedTensor
+from grounded_sam_2.grounding_dino.groundingdino.util.misc import NestedTensor
 
 
 class PositionEmbeddingSine(nn.Module):
