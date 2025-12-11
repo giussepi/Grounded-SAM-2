@@ -38,6 +38,8 @@ TASK_PROMPT = {
     "ocr_with_region": "<OCR_WITH_REGION>",
 }
 
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 # environment settings
 # use bfloat16
@@ -102,13 +104,11 @@ class Sam2Florence2MGR:
         os.makedirs(self.output_dir, exist_ok=True)
         assert isinstance(florence2_model_id, str), type(florence2_model_id)
         sam2_checkpoint = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "checkpoints",
-            sam2_checkpoint
+            CURRENT_DIR, "checkpoints", sam2_checkpoint
         )
         assert Path(sam2_checkpoint).is_file(), sam2_checkpoint
         sam2_config = os.path.join("configs", "sam2.1", sam2_config)
-        assert (Path("grounded_sam_2")/"sam2"/sam2_config).is_file(), sam2_config
+        assert (Path(CURRENT_DIR)/"sam2"/sam2_config).is_file(), sam2_config
 
         self.florence2_model_id = florence2_model_id
         self.sam2_checkpoint = sam2_checkpoint
@@ -688,7 +688,7 @@ class Sam2Florence2MGR:
         return results, masks, scores, logits
 
     def run_pipeline(self, *,
-                     image_path: str = "./grounded_sam_2/notebooks/images/cars.jpg",
+                     image_path: str = "",
                      pipeline: str = "object_detection_segmentation",
                      input_text: str | None = None,
                      **kwargs):
@@ -697,14 +697,16 @@ class Sam2Florence2MGR:
 
         Kwargs:
             image_path <str>: path to image to be processed.
-                              Default: ./grounded_sam_2/notebooks/images/cars.jpg
+                              Default: './notebooks/images/cars.jpg'
             pipeline   <str>: pipeline name to be executed.
-                              Default: object_detection_segmentation
+                              Default: 'object_detection_segmentation'
             input_text <str>: pipeline input text.
                               Default None
-
         """
-        assert Path(image_path).is_file()
+        image_path = image_path if image_path else os.path.join(
+            CURRENT_DIR, "notebooks","images", "cars.jpg"
+        )
+        assert Path(image_path).is_file(), image_path
         assert isinstance(pipeline, str), type(pipeline)
         if input_text is not None:
             assert isinstance(input_text, str), type(input_text)
