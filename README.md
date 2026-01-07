@@ -26,6 +26,9 @@ Grounded SAM 2 does not introduce significant methodological changes compared to
    ```
    pip install git+https://github.com/giussepi/Grounded-SAM-2.git@packaged --no-cache-dir
    ```
+   - If you get the following error: `AttributeError: install_layout. Did you mean: 'install_platlib'?`
+	   * [Solution](https://github.com/lasp/cdflib/issues/167#issuecomment-1234019321)
+       * run `export SETUPTOOLS_USE_DISTUTILS=stdlib` in a terminal
 4. Open a python shell and download the pretrained weights by importing the following modules:
    ```
    from grounded_sam_2 import download_pretrained_sam2
