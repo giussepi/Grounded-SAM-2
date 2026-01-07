@@ -23,10 +23,12 @@ LICENSE = "Apache 2.0"
 with open("README.md", "r", encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
+
 def _parse_requirements(filename: str) -> list[str]:
     """Return requirements from requirements file."""
     # Ref: https://stackoverflow.com/a/42033122/
     return distutils.text_file.TextFile(filename=str(Path(__file__).with_name(filename))).readlines()
+
 
 EXTRA_PACKAGES = {
     "notebooks": [
@@ -86,7 +88,8 @@ def get_extensions():
 
     try:
         from torch.utils.cpp_extension import CUDAExtension, CUDA_HOME
-        import subprocess, re
+        import subprocess
+        import re
         srcs = ["sam2/csrc/connected_components.cu"]
         compile_args = {
             "cxx": [],
@@ -181,15 +184,15 @@ setup(
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
     license=LICENSE,
-    package_dir={"":"."},
+    package_dir={"": "."},
     packages=find_packages(exclude="notebooks"),
     package_data={
-        NAME: ['**/*.*'], # including all non-python files
+        NAME: ['**/*.*'],  # including all non-python files
     },
     include_package_data=True,
     install_requires=_parse_requirements('requirements.txt'),
     extras_require=EXTRA_PACKAGES,
-    python_requires=">=3.12",
+    python_requires=">=3.10.0",
     ext_modules=get_extensions(),
     cmdclass=cmdclass,
 )
