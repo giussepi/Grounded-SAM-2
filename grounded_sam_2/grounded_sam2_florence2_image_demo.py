@@ -138,11 +138,12 @@ class Sam2Florence2MGR:
 
     @staticmethod
     def get_image(image_path: str | Image.Image) -> Image.Image:
+        """ Returns an Image.Image instance in RGB mode """
         assert isinstance(image_path, (str, Image.Image)), type(image_path)
 
         image = Image.open(image_path) if isinstance(image_path, str) else image_path
 
-        if image.mode != 'RGB':
+        if image.mode != "RGB":
             image = image.convert("RGB")
 
         return image
@@ -251,7 +252,8 @@ class Sam2Florence2MGR:
         ]
 
         # visualization results
-        img = cv2.imread(image_path)
+        img = np.array(image)
+        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
         detections = sv.Detections(
             xyxy=input_boxes,
             mask=masks.astype(bool),
@@ -325,7 +327,8 @@ class Sam2Florence2MGR:
         ]
 
         # visualization results
-        img = cv2.imread(image_path)
+        img = np.array(image)
+        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
         detections = sv.Detections(
             xyxy=input_boxes,
             mask=masks.astype(bool),
@@ -399,7 +402,8 @@ class Sam2Florence2MGR:
         ]
 
         # visualization results
-        img = cv2.imread(image_path)
+        img = np.array(image)
+        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
         detections = sv.Detections(
             xyxy=input_boxes,
             mask=masks.astype(bool),
@@ -470,7 +474,8 @@ class Sam2Florence2MGR:
         ]
 
         # visualization results
-        img = cv2.imread(image_path)
+        img = np.array(image)
+        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
         detections = sv.Detections(
             xyxy=input_boxes,
             mask=masks.astype(bool),
@@ -558,7 +563,8 @@ class Sam2Florence2MGR:
         ]
 
         # visualization florence2 mask
-        img = cv2.imread(image_path)
+        img = np.array(image)
+        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
         detections = sv.Detections(
             xyxy=input_boxes,
             mask=florence2_mask.astype(bool),
@@ -579,7 +585,8 @@ class Sam2Florence2MGR:
         print(f'Successfully save florence-2 annotated image to "{self.output_dir}"')
 
         # visualize sam2 mask
-        img = cv2.imread(image_path)
+        img = np.array(image)
+        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
         detections = sv.Detections(
             xyxy=input_boxes,
             mask=sam2_masks.astype(bool),
@@ -612,7 +619,8 @@ class Sam2Florence2MGR:
     ):
         """
         Kwargs:
-            image_path <str | Image.Image>: PIL.Image instance or path to image to be processed.
+            image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
+                              processed. NOTE: It works better with RGB images.
             text_input <str>: object to be found. Several objects can be specified
                               using <and> separator. E.g. "person <and> crowd <and>
                               football"
@@ -675,7 +683,8 @@ class Sam2Florence2MGR:
             ]
 
             # visualization results
-            img = cv2.imread(image_path)
+            img = np.array(image)
+            img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
             detections = sv.Detections(
                 xyxy=input_boxes,
                 mask=masks.astype(bool),
@@ -708,7 +717,8 @@ class Sam2Florence2MGR:
         Excecutes the specified pipeline over the provided image
 
         Kwargs:
-            image_path <str | Image.image>: PIL.Image instance or path to image to be processed.
+            image_path <str | Image.image>: PIL.Image instance (RGB or grayscale) or path to image to be
+                              processed. NOTE: It works better with RGB images.
                               Default: './notebooks/images/cars.jpg'
             pipeline   <str>: pipeline name to be executed.
                               Default: 'object_detection_segmentation'
