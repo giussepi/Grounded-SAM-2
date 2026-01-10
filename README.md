@@ -41,27 +41,37 @@ For now we re-wrote only the code from `grounded_sam_2/grounded_sam2_florence2_i
 ```
 from grounded_sam_2.grounded_sam2_florence2_image_demo import Sam2Florence2MGR
 
+# IMAGE OPTION1 : using image path
+image_path = "<image path>"
+
+# IMAGE OPTION 2: grayscale PIL image
+image_path = PIL.Image.fromarray(cv2.imread("<image_path>", 0))
+
+# IMAGE OPTION 3: RGB PIL image (OpenCv.imread load images as BGR, so inverting axes is necessary)
+#                 the model works better with RGB images than grayscale images
+image_path = PIL.Image.fromarray(cv2.imread("<image_path>")[:, :, ::-1])
+
+
 sm_mgr = Sam2Florence2MGR()
 sm_mgr.run_pipeline()
 sm_mgr.run_pipeline(
-    image_path="<image path>",
+    image_path=image path,
     pipeline="open_vocabulary_detection_segmentation",
     input_text="person <and> crowd <and> football",
     verbose=True,
     plot_detections=True,
 )
 sm_mgr.run_pipeline(
-    image_path="<image_path>",
+    image_path=image_path,
     pipeline="region_proposal_segmentation"
 )
 
 # Using one line leveraging the __call__ method:
 Sam2Florence2MGR()(
-    image_path="<image_path>",
+    image_path=image_path,
     pipeline="open_vocabulary_detection_segmentation",
     input_text="person <and> crowd <and> football",
     verbose=True,
     plot_detections=True,
 )
-
 ```
