@@ -136,6 +136,17 @@ class Sam2Florence2MGR:
         """
         return self.run_pipeline(image_path=image_path, pipeline=pipeline, input_text=input_text, **kwargs)
 
+    @staticmethod
+    def get_image(image_path: str | Image.Image) -> Image.Image:
+        assert isinstance(image_path, (str, Image.Image)), type(image_path)
+
+        image = Image.open(image_path) if isinstance(image_path, str) else image_path
+
+        if image.mode != 'RGB':
+            image = image.convert("RGB")
+
+        return image
+
     def build_models(self) -> tuple:
         """
         Returns:
@@ -192,13 +203,13 @@ class Sam2Florence2MGR:
 
     def object_detection_and_segmentation(
         self,
-        image_path,
+        image_path: str | Image.Image,
         text_input=None,
     ):
         assert text_input is None, "Text input should be None when calling object detection pipeline."
         task_prompt = "<OD>"
         # run florence-2 object detection in demo
-        image = Image.open(image_path).convert("RGB")
+        image = self.get_image(image_path)
         results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
@@ -266,13 +277,13 @@ class Sam2Florence2MGR:
 
     def dense_region_caption_and_segmentation(
         self,
-        image_path,
+        image_path: str | Image.Image,
         text_input=None,
     ):
         assert text_input is None, "Text input should be None when calling dense region caption pipeline."
         task_prompt = "<DENSE_REGION_CAPTION>"
         # run florence-2 object detection in demo
-        image = Image.open(image_path).convert("RGB")
+        image = self.get_image(image_path)
         results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
@@ -340,13 +351,13 @@ class Sam2Florence2MGR:
 
     def region_proposal_and_segmentation(
         self,
-        image_path,
+        image_path: str | Image.Image,
         text_input=None,
     ):
         assert text_input is None, "Text input should be None when calling region proposal pipeline."
         task_prompt = "<REGION_PROPOSAL>"
         # run florence-2 object detection in demo
-        image = Image.open(image_path).convert("RGB")
+        image = self.get_image(image_path)
         results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
@@ -414,12 +425,12 @@ class Sam2Florence2MGR:
 
     def phrase_grounding_and_segmentation(
         self,
-        image_path,
+        image_path: str | Image.Image,
         text_input=None,
     ):
         task_prompt = "<CAPTION_TO_PHRASE_GROUNDING>"
         # run florence-2 object detection in demo
-        image = Image.open(image_path).convert("RGB")
+        image = self.get_image(image_path)
         results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
@@ -488,12 +499,12 @@ class Sam2Florence2MGR:
 
     def referring_expression_segmentation(
         self,
-        image_path,
+        image_path: str | Image.Image,
         text_input=None,
     ):
         task_prompt = "<REFERRING_EXPRESSION_SEGMENTATION>"
         # run florence-2 object detection in demo
-        image = Image.open(image_path).convert("RGB")
+        image = self.get_image(image_path)
         results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
@@ -594,14 +605,14 @@ class Sam2Florence2MGR:
 
     def open_vocabulary_detection_and_segmentation(
         self,
-        image_path,
+        image_path: str | Image.Image,
         text_input,
         verbose: bool = True,
         plot_detections: bool = True,
     ):
         """
         Kwargs:
-            image_path <str>: path to image to be processed
+            image_path <str | Image.Image>: PIL.Image instance or path to image to be processed.
             text_input <str>: object to be found. Several objects can be specified
                               using <and> separator. E.g. "person <and> crowd <and>
                               football"
@@ -618,9 +629,10 @@ class Sam2Florence2MGR:
             )
         """
         assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
+
         task_prompt = "<OPEN_VOCABULARY_DETECTION>"
         # run florence-2 object detection in demo
-        image = Image.open(image_path).convert("RGB")
+        image = self.get_image(image_path)
         results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Open-Vocabulary Detection Output Format
@@ -688,7 +700,7 @@ class Sam2Florence2MGR:
         return results, masks, scores, logits
 
     def run_pipeline(self, *,
-                     image_path: str = "",
+                     image_path: Image.Image | str = "",
                      pipeline: str = "object_detection_segmentation",
                      input_text: str | None = None,
                      **kwargs):
@@ -696,17 +708,19 @@ class Sam2Florence2MGR:
         Excecutes the specified pipeline over the provided image
 
         Kwargs:
-            image_path <str>: path to image to be processed.
+            image_path <str | Image.image>: PIL.Image instance or path to image to be processed.
                               Default: './notebooks/images/cars.jpg'
             pipeline   <str>: pipeline name to be executed.
                               Default: 'object_detection_segmentation'
             input_text <str>: pipeline input text.
                               Default None
         """
-        image_path = image_path if image_path else os.path.join(
-            CURRENT_DIR, "notebooks","images", "cars.jpg"
-        )
-        assert Path(image_path).is_file(), image_path
+        assert isinstance(image_path, (str, Image.Image)), type(image_path)
+        if isinstance(image_path, str):
+            image_path = image_path if image_path else os.path.join(
+                CURRENT_DIR, "notebooks", "images", "cars.jpg"
+            )
+            assert Path(image_path).is_file(), image_path
         assert isinstance(pipeline, str), type(pipeline)
         if input_text is not None:
             assert isinstance(input_text, str), type(input_text)
