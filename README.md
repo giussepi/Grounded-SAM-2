@@ -54,24 +54,45 @@ image_path = PIL.Image.fromarray(cv2.imread("<image_path>")[:, :, ::-1])
 
 sm_mgr = Sam2Florence2MGR()
 sm_mgr.run_pipeline()
-sm_mgr.run_pipeline(
+results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
     image_path=image path,
     pipeline="open_vocabulary_detection_segmentation",
     input_text="person <and> crowd <and> football",
+	bbox_conf_score_threshold=None,
     verbose=True,
     plot_detections=True,
+    return_values=True,
+)
+results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
+    image_path=image_path,
+    pipeline="object_detection_segmentation",
+    bbox_conf_score_threshold=None,
+    verbose=True,
+    plot_detections=True,
+    return_values=True,
 )
 sm_mgr.run_pipeline(
     image_path=image_path,
     pipeline="region_proposal_segmentation"
 )
 
+
 # Using one line leveraging the __call__ method:
 Sam2Florence2MGR()(
     image_path=image_path,
     pipeline="open_vocabulary_detection_segmentation",
     input_text="person <and> crowd <and> football",
+	conf_score_threshold=.3,
     verbose=True,
     plot_detections=True,
 )
 ```
+
+## TODO:
+* Update `grounded_sam_2/grounded_sam2_florence2_image_demo.py->Sam2Florence2MGR`
+  - [x] object_detection_and_segmentation
+  - [ ] dense_region_caption_and_segmentation
+  - [ ] region_proposal_and_segmentation
+  - [ ] phrase_grounding_and_segmentation
+  - [ ] referring_expression_segmentation
+  - [x] open_vocabulary_detection_and_segmentation

@@ -9,8 +9,8 @@ import numpy as np
 import supervision as sv
 import torch
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
 
+from grounded_sam_2.florence2.manager import Florence2MGR
 from grounded_sam_2.sam2.build_sam import build_sam2
 from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
 
@@ -79,7 +79,7 @@ class Sam2Florence2MGR:
 
     def __init__(self, *,
                  output_dir: str = "./outputs",
-                 florence2_model_id: str = "microsoft/Florence-2-large",
+                 florence2_model_id: str = "florence-community/Florence-2-large",
                  sam2_checkpoint: str = "sam2.1_hiera_large.pt",
                  sam2_config: str = "sam2.1_hiera_l.yaml",
                  ):
@@ -90,8 +90,8 @@ class Sam2Florence2MGR:
             output_dir <str>: output directory path
                               Default "./outputs"
             florence2_model_id <str>: model id for the
-                              transformers.AutoModelForCausalLM.from_pretrained method
-                              Default "microsoft/Florence-2-large"
+                              transformers.Florence2ForConditionalGeneration.from_pretrained method
+                              Default "florence-community/Florence-2-large"
             sam2_checkpoint <str>: one of the sam2 checkpoint located at
                               "grounded_sam_2/checkpoints/".
                               Default "sam2.1_hiera_large.pt"
@@ -114,8 +114,7 @@ class Sam2Florence2MGR:
         self.sam2_checkpoint = sam2_checkpoint
         self.sam2_config = sam2_config
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-
-        self.florence2_model, self.florence2_processor, self.sam2_model, self.sam2_predictor = self.build_models()
+        self.florence2_mgr, self.sam2_model, self.sam2_predictor = self.build_models()
 
     def __call__(self, *,
                  image_path: str = "./grounded_sam_2/notebooks/images/cars.jpg",
@@ -154,45 +153,19 @@ class Sam2Florence2MGR:
             florence2_model, florence2_processor, sam2_model, sam2_predictor
         """
         # build florence-2
-        florence2_model = AutoModelForCausalLM.from_pretrained(
-            self.florence2_model_id,
-            trust_remote_code=True,
-            torch_dtype='auto'
-        ).eval().to(self.device)
-        florence2_processor = AutoProcessor.from_pretrained(
-            self.florence2_model_id, trust_remote_code=True)
+        florence2_mgr = Florence2MGR(self.florence2_model_id, self.device)
 
         # build sam 2
         sam2_model = build_sam2(
             self.sam2_config, self.sam2_checkpoint, device=self.device)
         sam2_predictor = SAM2ImagePredictor(sam2_model)
 
-        return florence2_model, florence2_processor, sam2_model, sam2_predictor
+        return florence2_mgr, sam2_model, sam2_predictor
 
-    def run_florence2(self, task_prompt, text_input, image):
-        device = self.florence2_model.device
+    def run_florence2(self, task_prompt, text_input, image) -> list:
+        results = self.florence2_mgr(task_prompt, image, text_input)
 
-        if text_input is None:
-            prompt = task_prompt
-        else:
-            prompt = task_prompt + text_input
-
-        inputs = self.florence2_processor(text=prompt, images=image, return_tensors="pt").to(device, torch.float16)
-        generated_ids = self.florence2_model.generate(
-            input_ids=inputs["input_ids"].to(device),
-            pixel_values=inputs["pixel_values"].to(device),
-            max_new_tokens=1024,
-            early_stopping=False,
-            do_sample=False,
-            num_beams=3,
-        )
-        generated_text = self.florence2_processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
-        parsed_answer = self.florence2_processor.post_process_generation(
-            generated_text,
-            task=task_prompt,
-            image_size=(image.width, image.height)
-        )
-        return parsed_answer
+        return results
 
     """
     We support a set of pipelines built by Florence-2 + SAM 2
@@ -205,13 +178,42 @@ class Sam2Florence2MGR:
     def object_detection_and_segmentation(
         self,
         image_path: str | Image.Image,
-        text_input=None,
+        bbox_conf_score_threshold: float | None = None,
+        verbose: bool = True,
+        plot_detections: bool = True,
+        return_values: bool = False,
     ):
-        assert text_input is None, "Text input should be None when calling object detection pipeline."
+        """
+        Kwargs:
+            image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
+                              processed. NOTE: It works better with RGB images.
+            bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.5
+                              Default None
+            verbose   <bool>: Whether or not print extra messages.
+                              Default True
+            plot_detections <bool>: Whether or plot and save detections to disk.
+                              Default True
+            return_values <bool>: Whether or not return values.
+                              Default False
+
+        Returns:
+            tuple(
+                results <dict>: dictionary containing 'bboxes', 'labels'
+                masks <ndarray>: binary ndarray [N, H, W]
+                masks scores <ndarray>: ndarray [N, 1]
+                masks logits <ndarray>: ndarray [N, 1, 256, 256]
+            )
+        """
+        if bbox_conf_score_threshold is not None:
+            assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
+        assert isinstance(return_values, bool), type(return_values)
+
+        # NOTE: text_input must be None when calling object detection pipeline.
+        text_input = None
         task_prompt = "<OD>"
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
-        results = self.run_florence2(task_prompt, text_input, image)
+        generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
         {'<OD>':
@@ -228,9 +230,27 @@ class Sam2Florence2MGR:
             }
         }
         """
+        # TODO: refactor the following lines
+        if bbox_conf_score_threshold is not None:
+            self.florence2_mgr.compute_bboxes_confidence_scores(task_prompt, results, generated_ids)
+            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            self.florence2_mgr.filter_bboxes_by_confidence(
+                task_prompt, results, bbox_conf_score_threshold, inplace=True)
+            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            # returning if there are no results after applying the confidence threshold
+            if len(results[task_prompt]['bboxes']) == 0:
+                if verbose:
+                    print(f"No detections were found after filfering results using "
+                          f"bbox the confidence score: {bbox_conf_score_threshold}")
+                if return_values:
+                    return results, None, None, None
+                return
+
         results = results[task_prompt]
         # parse florence-2 detection results
         input_boxes = np.array(results["bboxes"])
+        if verbose:
+            print(results)
         class_names = results["labels"]
         class_ids = np.array(list(range(len(class_names))))
 
@@ -246,32 +266,37 @@ class Sam2Florence2MGR:
         if masks.ndim == 4:
             masks = masks.squeeze(1)
 
-        # specify labels
-        labels = [
-            f"{class_name}" for class_name in class_names
-        ]
+        if plot_detections:
+            # specify labels
+            labels = [
+                f"{class_name}" for class_name in class_names
+            ]
 
-        # visualization results
-        img = np.array(image)
-        img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
-        detections = sv.Detections(
-            xyxy=input_boxes,
-            mask=masks.astype(bool),
-            class_id=class_ids
-        )
+            # visualization results
+            img = np.array(image)
+            img = img[:, :, ::-1]  # RGB to BGR, required to use cv2.imwrite correctly
+            detections = sv.Detections(
+                xyxy=input_boxes,
+                mask=masks.astype(bool),
+                class_id=class_ids
+            )
 
-        box_annotator = sv.BoxAnnotator()
-        annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
+            box_annotator = sv.BoxAnnotator()
+            annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
 
-        label_annotator = sv.LabelAnnotator()
-        annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-        cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_annotated_image.jpg"), annotated_frame)
+            label_annotator = sv.LabelAnnotator()
+            annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
+            cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_annotated_image.jpg"), annotated_frame)
 
-        mask_annotator = sv.MaskAnnotator()
-        annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
-        cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_image_with_mask.jpg"), annotated_frame)
+            mask_annotator = sv.MaskAnnotator()
+            annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
+            cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_image_with_mask.jpg"), annotated_frame)
 
-        print(f'Successfully save annotated image to "{self.output_dir}"')
+            if verbose:
+                print(f'Successfully save annotated image to "{self.output_dir}"')
+
+        if return_values:
+            return results, masks, scores, logits
 
     """
     Pipeline 2: Dense Region Caption + Segmentation
@@ -286,7 +311,7 @@ class Sam2Florence2MGR:
         task_prompt = "<DENSE_REGION_CAPTION>"
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
-        results = self.run_florence2(task_prompt, text_input, image)
+        generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
         {'<DENSE_REGION_CAPTION>':
@@ -361,7 +386,7 @@ class Sam2Florence2MGR:
         task_prompt = "<REGION_PROPOSAL>"
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
-        results = self.run_florence2(task_prompt, text_input, image)
+        generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
         {'<REGION_PROPOSAL>':
@@ -435,7 +460,7 @@ class Sam2Florence2MGR:
         task_prompt = "<CAPTION_TO_PHRASE_GROUNDING>"
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
-        results = self.run_florence2(task_prompt, text_input, image)
+        generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
         {'<CAPTION_TO_PHRASE_GROUNDING>':
@@ -510,7 +535,7 @@ class Sam2Florence2MGR:
         task_prompt = "<REFERRING_EXPRESSION_SEGMENTATION>"
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
-        results = self.run_florence2(task_prompt, text_input, image)
+        generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Object Detection Output Format
         {'<REFERRING_EXPRESSION_SEGMENTATION>':
@@ -614,8 +639,10 @@ class Sam2Florence2MGR:
         self,
         image_path: str | Image.Image,
         text_input,
+        bbox_conf_score_threshold: float | None = None,
         verbose: bool = True,
         plot_detections: bool = True,
+        return_values: bool = False,
     ):
         """
         Kwargs:
@@ -624,24 +651,33 @@ class Sam2Florence2MGR:
             text_input <str>: object to be found. Several objects can be specified
                               using <and> separator. E.g. "person <and> crowd <and>
                               football"
+            bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.5
+                              Default None
             verbose   <bool>: Whether or not print extra messages.
+                              Default True
             plot_detections <bool>: Whether or plot and save detections to disk.
+                              Default True
+            return_values <bool>: Whether or not return values.
+                              Default False
 
         Returns:
             tuple(
                 results <dict>: dictionary containing 'bboxes', 'bboxes_labels',
                                 'polygons', 'polygons_labels'
                 masks <ndarray>: binary ndarray [N, H, W]
-                scores <ndarray>: ndarray [N, 1]
-                logits <ndarray>: ndarray [N, 1, 256, 256]
+                masks scores <ndarray>: ndarray [N, 1]
+                masks logits <ndarray>: ndarray [N, 1, 256, 256]
             )
         """
         assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
+        if bbox_conf_score_threshold is not None:
+            assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
+        assert isinstance(return_values, bool), type(return_values)
 
         task_prompt = "<OPEN_VOCABULARY_DETECTION>"
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
-        results = self.run_florence2(task_prompt, text_input, image)
+        generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
 
         """ Florence-2 Open-Vocabulary Detection Output Format
         {'<OPEN_VOCABULARY_DETECTION>':
@@ -656,6 +692,21 @@ class Sam2Florence2MGR:
             }
         }
         """
+        if bbox_conf_score_threshold is not None:
+            self.florence2_mgr.compute_bboxes_confidence_scores(task_prompt, results, generated_ids)
+            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            self.florence2_mgr.filter_bboxes_by_confidence(
+                task_prompt, results, bbox_conf_score_threshold, inplace=True)
+            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            # returning if there are no results after applying the confidence threshold
+            if len(results[task_prompt]['bboxes']) == 0:
+                if verbose:
+                    print(f"No bbox detections were found after filfering results using "
+                          f"the confidence score: {bbox_conf_score_threshold}")
+                if return_values:
+                    return results, None, None, None
+                return
+
         results = results[task_prompt]
         # parse florence-2 detection results
         input_boxes = np.array(results["bboxes"])
@@ -706,7 +757,8 @@ class Sam2Florence2MGR:
             if verbose:
                 print(f'Successfully save annotated image to "{self.output_dir}"')
 
-        return results, masks, scores, logits
+        if return_values:
+            return results, masks, scores, logits
 
     def run_pipeline(self, *,
                      image_path: Image.Image | str = "",
@@ -744,7 +796,8 @@ class Sam2Florence2MGR:
             case "object_detection_segmentation":
                 # pipeline-1: detection + segmentation
                 return self.object_detection_and_segmentation(
-                    image_path=image_path
+                    image_path=image_path,
+                    **kwargs
                 )
             case "dense_region_caption_segmentation":
                 # pipeline-2: dense region caption + segmentation
