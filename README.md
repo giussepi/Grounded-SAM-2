@@ -40,7 +40,7 @@ Grounded SAM 2 does not introduce significant methodological changes compared to
    ```
    pip uninstall grounded_sam_2 -y
    ```
-2. Get rid of the dowloaded weights by removing its installation folder
+2. Get rid of the downloaded weights by removing its installation folder
    ```
    sudo rm -r <PATH TO YOUR PYTHON ENVIRONMENT>/lib/<YOUR PYTHON VERSION>/site-packages/grounded_sam_2/
    ```
