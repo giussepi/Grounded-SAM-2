@@ -66,7 +66,7 @@ image_path = PIL.Image.fromarray(cv2.imread("<image_path>")[:, :, ::-1])
 sm_mgr = Sam2Florence2MGR()
 sm_mgr.run_pipeline()
 results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
-    image_path=image path,
+    image_path=image_path,
     pipeline="open_vocabulary_detection_segmentation",
     input_text="person <and> crowd <and> football",
 	bbox_conf_score_threshold=None,
