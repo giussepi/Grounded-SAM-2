@@ -35,6 +35,17 @@ Grounded SAM 2 does not introduce significant methodological changes compared to
    # from grounded_sam_2 import download_pretrained_grounding_dino # not necessary for now
    ```
 
+## Uninstallation
+1. Use PIP
+   ```
+   pip uninstall grounded_sam_2 -y
+   ```
+2. Get rid of the dowloaded weights by removing its installation folder
+   ```
+   sudo rm -r <PATH TO YOUR PYTHON ENVIRONMENT>/lib/<YOUR PYTHON VERSION>/site-packages/grounded_sam_2/
+   ```
+
+
 ## Usage
 For now we re-wrote only the code from `grounded_sam_2/grounded_sam2_florence2_image_demo.py`. Thus, it can be used as follows:
 
