@@ -243,7 +243,7 @@ class Sam2Florence2MGR:
                     print(f"No detections were found after filfering results using "
                           f"bbox the confidence score: {bbox_conf_score_threshold}")
                 if return_values:
-                    return results, None, None, None
+                    return results[task_prompt], None, None, None
                 return
 
         results = results[task_prompt]
@@ -704,7 +704,7 @@ class Sam2Florence2MGR:
                     print(f"No bbox detections were found after filfering results using "
                           f"the confidence score: {bbox_conf_score_threshold}")
                 if return_values:
-                    return results, None, None, None
+                    return results[task_prompt], None, None, None
                 return
 
         results = results[task_prompt]
