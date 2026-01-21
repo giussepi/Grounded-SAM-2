@@ -20,13 +20,12 @@ class FlorenceTasks:
 
     OPTIONS = (OD, OVD, DRC, RP, C2PG, RES)
     LABELS = {
-        OD: ('labels', 'bboxes', ),
-        OVD: ('bboxes_labels', 'bboxes', ),
-        # TODO: need to define the labels for:
-        # DRC: (),
-        # RP: (),
-        # C2PG: (),
-        # RES: (),
+        OD: ('labels', 'bboxes'),
+        OVD: ('bboxes_labels', 'bboxes', 'polygons_labels', 'polygons'),
+        DRC: ('labels', 'bboxes'),
+        RP: ('labels', 'bboxes'),
+        C2PG: ('labels', 'bboxes'),
+        RES: ('labels', 'polygons'),
     }
 
     @staticmethod
