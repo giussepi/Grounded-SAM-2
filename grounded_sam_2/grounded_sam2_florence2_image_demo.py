@@ -182,7 +182,7 @@ class Sam2Florence2MGR:
         verbose: bool = True,
         plot_detections: bool = True,
         return_values: bool = False,
-    ):
+    ) -> tuple:
         """
         Kwargs:
             image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
@@ -198,10 +198,10 @@ class Sam2Florence2MGR:
 
         Returns:
             tuple(
-                results <dict>: dictionary containing 'bboxes', 'labels'
-                masks <ndarray>: binary ndarray [N, H, W]
-                masks scores <ndarray>: ndarray [N, 1]
-                masks logits <ndarray>: ndarray [N, 1, 256, 256]
+                results         <dict | None>: dictionary containing 'bboxes', 'labels'
+                masks        <ndarray | None>: binary ndarray [N, H, W]
+                masks scores <ndarray | None>: ndarray [N, 1]
+                masks logits <ndarray | None>: ndarray [N, 1, 256, 256]
             )
         """
         if bbox_conf_score_threshold is not None:
@@ -243,7 +243,7 @@ class Sam2Florence2MGR:
                     print(f"No detections were found after filfering results using "
                           f"bbox the confidence score: {bbox_conf_score_threshold}")
                 if return_values:
-                    return results[task_prompt], None, None, None
+                    return None, None, None, None
                 return
 
         results = results[task_prompt]
@@ -643,7 +643,7 @@ class Sam2Florence2MGR:
         verbose: bool = True,
         plot_detections: bool = True,
         return_values: bool = False,
-    ):
+    ) -> tuple:
         """
         Kwargs:
             image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
@@ -662,11 +662,11 @@ class Sam2Florence2MGR:
 
         Returns:
             tuple(
-                results <dict>: dictionary containing 'bboxes', 'bboxes_labels',
+                results         <dict | None>: dictionary containing 'bboxes', 'bboxes_labels',
                                 'polygons', 'polygons_labels'
-                masks <ndarray>: binary ndarray [N, H, W]
-                masks scores <ndarray>: ndarray [N, 1]
-                masks logits <ndarray>: ndarray [N, 1, 256, 256]
+                masks        <ndarray | None>: binary ndarray [N, H, W]
+                masks scores <ndarray | None>: ndarray [N, 1]
+                masks logits <ndarray | None>: ndarray [N, 1, 256, 256]
             )
         """
         assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
@@ -704,7 +704,7 @@ class Sam2Florence2MGR:
                     print(f"No bbox detections were found after filfering results using "
                           f"the confidence score: {bbox_conf_score_threshold}")
                 if return_values:
-                    return results[task_prompt], None, None, None
+                    return None, None, None, None
                 return
 
         results = results[task_prompt]
