@@ -144,7 +144,7 @@ class Florence2MGR:
         idxs = np.array(data[BBOX_SCORES_LABEL]) > score
 
         for key in FlorenceTasks.get_parsing_labels(task_prompt) + (BBOX_SCORES_LABEL, ):
-            data[key] = np.array(data[key])[idxs].tolist()
+            data[key] = np.array(data[key])[idxs].tolist() if len(data[key]) else []
 
         return parsed_answer
 
