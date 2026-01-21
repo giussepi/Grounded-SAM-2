@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """ grounded_sam_2/florence2/task_prompts.py """
 
+from grounded_sam_2.florence2.constants import BBOXES_LABEL
+
 
 __all__ = [
     'FlorenceTasks',
@@ -20,11 +22,11 @@ class FlorenceTasks:
 
     OPTIONS = (OD, OVD, DRC, RP, C2PG, RES)
     LABELS = {
-        OD: ('labels', 'bboxes'),
-        OVD: ('bboxes_labels', 'bboxes', 'polygons_labels', 'polygons'),
-        DRC: ('labels', 'bboxes'),
-        RP: ('labels', 'bboxes'),
-        C2PG: ('labels', 'bboxes'),
+        OD: ('labels', BBOXES_LABEL),
+        OVD: ('bboxes_labels', BBOXES_LABEL, 'polygons_labels', 'polygons'),
+        DRC: ('labels', BBOXES_LABEL),
+        RP: ('labels', BBOXES_LABEL),
+        C2PG: ('labels', BBOXES_LABEL),
         RES: ('labels', 'polygons'),
     }
 
