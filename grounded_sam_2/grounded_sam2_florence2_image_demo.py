@@ -233,10 +233,10 @@ class Sam2Florence2MGR:
         # TODO: refactor the following lines
         if bbox_conf_score_threshold is not None:
             self.florence2_mgr.compute_bboxes_confidence_scores(task_prompt, results, generated_ids)
-            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             self.florence2_mgr.filter_bboxes_by_confidence(
                 task_prompt, results, bbox_conf_score_threshold, inplace=True)
-            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             # returning if there are no results after applying the confidence threshold
             if len(results[task_prompt]['bboxes']) == 0:
                 if verbose:
@@ -694,10 +694,10 @@ class Sam2Florence2MGR:
         """
         if bbox_conf_score_threshold is not None:
             self.florence2_mgr.compute_bboxes_confidence_scores(task_prompt, results, generated_ids)
-            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             self.florence2_mgr.filter_bboxes_by_confidence(
                 task_prompt, results, bbox_conf_score_threshold, inplace=True)
-            # self.florence2_mgr.print_labels(task_prompt, results) # For debugging
+            # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             # returning if there are no results after applying the confidence threshold
             if len(results[task_prompt]['bboxes']) == 0:
                 if verbose:

@@ -21,6 +21,8 @@ class FlorenceTasks:
     RES = '<REFERRING_EXPRESSION_SEGMENTATION>'
 
     OPTIONS = (OD, OVD, DRC, RP, C2PG, RES)
+    # NOTE: having labels at the very beginning is necessary for the method
+    #       grounded_sam_2/florence2/manager.py -> Florence2MGR.print_bbox_labels_scores
     LABELS = {
         OD: ('labels', BBOXES_LABEL),
         OVD: ('bboxes_labels', BBOXES_LABEL, 'polygons_labels', 'polygons'),
@@ -56,3 +58,9 @@ class FlorenceTasks:
         cleaned_option = cls.validate(option)
 
         return cls.LABELS[cleaned_option]
+
+    @classmethod
+    def validate_bbox_task(cls, option: str):
+        """ validates that the provided option returns bboxes """
+        assert BBOXES_LABEL in cls.get_parsing_labels(option), \
+            f'The {option} task does not return {BBOXES_LABEL}'

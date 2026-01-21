@@ -134,7 +134,7 @@ class Florence2MGR:
         """
         Filters thee bboxes using the provided score
         """
-        FlorenceTasks.validate(task_prompt)
+        FlorenceTasks.validate_bbox_task(task_prompt)
         assert isinstance(parsed_answer, dict), type(parsed_answer)
         assert isinstance(score, float), type(score)
         assert isinstance(inplace, bool), type(inplace)
@@ -149,15 +149,15 @@ class Florence2MGR:
         return parsed_answer
 
     @staticmethod
-    def print_labels(task_prompt: str, parsed_answer: dict):
+    def print_bbox_labels_scores(task_prompt: str, parsed_answer: dict):
         """
-        Prints labels from parsed_answer
+        Prints labels and scores from parsed_answer
         """
-        FlorenceTasks.validate(task_prompt)
+        FlorenceTasks.validate_bbox_task(task_prompt)
         assert isinstance(parsed_answer, dict), type(parsed_answer)
 
-        bbox_lbl = FlorenceTasks.get_parsing_labels(task_prompt)[0]
+        bbox_labels_key = FlorenceTasks.get_parsing_labels(task_prompt)[0]
 
-        for label, score in zip(parsed_answer[task_prompt][bbox_lbl],
+        for label, score in zip(parsed_answer[task_prompt][bbox_labels_key],
                                 parsed_answer[task_prompt][BBOX_SCORES_LABEL]):
             print(f'{label}: {score}')
