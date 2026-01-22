@@ -2,6 +2,7 @@
 """ grounded_sam_2/grounded_sam2_florence2_image_demo.py """
 
 import os
+from collections.abc import Iterable
 from pathlib import Path
 
 import cv2
@@ -10,7 +11,9 @@ import supervision as sv
 import torch
 from PIL import Image
 
+from grounded_sam_2.florence2.constants import BBOXES_LABEL
 from grounded_sam_2.florence2.manager import Florence2MGR
+from grounded_sam_2.florence2.task_prompts import FlorenceTasks
 from grounded_sam_2.sam2.build_sam import build_sam2
 from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
 
@@ -179,6 +182,7 @@ class Sam2Florence2MGR:
         self,
         image_path: str | Image.Image,
         bbox_conf_score_threshold: float | None = None,
+        filter_labels: Iterable[str] = None,
         verbose: bool = True,
         plot_detections: bool = True,
         return_values: bool = False,
@@ -188,6 +192,8 @@ class Sam2Florence2MGR:
             image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
                               processed. NOTE: It works better with RGB images.
             bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.5
+                              Default None
+            filter_labels <Iterable[str]>: list of desired labels to filter the detections.
                               Default None
             verbose   <bool>: Whether or not print extra messages.
                               Default True
@@ -206,6 +212,8 @@ class Sam2Florence2MGR:
         """
         if bbox_conf_score_threshold is not None:
             assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
+        filter_labels = [] if filter_labels is None else filter_labels
+        assert isinstance(filter_labels, Iterable), type(filter_labels)
         assert isinstance(return_values, bool), type(return_values)
 
         # NOTE: text_input must be None when calling object detection pipeline.
@@ -238,7 +246,7 @@ class Sam2Florence2MGR:
                 task_prompt, results, bbox_conf_score_threshold, inplace=True)
             # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             # returning if there are no results after applying the confidence threshold
-            if len(results[task_prompt]['bboxes']) == 0:
+            if len(results[task_prompt][BBOXES_LABEL]) == 0:
                 if verbose:
                     print(f"No detections were found after filfering results using "
                           f"bbox the confidence score: {bbox_conf_score_threshold}")
@@ -246,9 +254,23 @@ class Sam2Florence2MGR:
                     return None, None, None, None
                 return
 
+        # filtering by labels
+        if filter_labels:
+            bbox_labels_key = FlorenceTasks.get_parsing_labels(task_prompt)[0]
+            results = self.florence2_mgr.filter_parsed_answer_by_labels(
+                task_prompt, results, label_key=bbox_labels_key, filter_labels=filter_labels)[0]
+            # returning if there are no results after applying label filtration
+            if len(results[task_prompt][BBOXES_LABEL]) == 0:
+                if verbose:
+                    print(f"No detections were found after filfering results by "
+                          f"labels: {filter_labels}")
+                if return_values:
+                    return None, None, None, None
+                return
+
         results = results[task_prompt]
         # parse florence-2 detection results
-        input_boxes = np.array(results["bboxes"])
+        input_boxes = np.array(results[BBOXES_LABEL])
         if verbose:
             print(results)
         class_names = results["labels"]
@@ -330,7 +352,7 @@ class Sam2Florence2MGR:
         """
         results = results[task_prompt]
         # parse florence-2 detection results
-        input_boxes = np.array(results["bboxes"])
+        input_boxes = np.array(results[BBOXES_LABEL])
         class_names = results["labels"]
         class_ids = np.array(list(range(len(class_names))))
 
@@ -405,7 +427,7 @@ class Sam2Florence2MGR:
         """
         results = results[task_prompt]
         # parse florence-2 detection results
-        input_boxes = np.array(results["bboxes"])
+        input_boxes = np.array(results[BBOXES_LABEL])
         class_names = results["labels"]
         class_ids = np.array(list(range(len(class_names))))
 
@@ -477,7 +499,7 @@ class Sam2Florence2MGR:
         assert text_input is not None, "Text input should not be None when calling phrase grounding pipeline."
         results = results[task_prompt]
         # parse florence-2 detection results
-        input_boxes = np.array(results["bboxes"])
+        input_boxes = np.array(results[BBOXES_LABEL])
         class_names = results["labels"]
         class_ids = np.array(list(range(len(class_names))))
 
@@ -699,7 +721,7 @@ class Sam2Florence2MGR:
                 task_prompt, results, bbox_conf_score_threshold, inplace=True)
             # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             # returning if there are no results after applying the confidence threshold
-            if len(results[task_prompt]['bboxes']) == 0:
+            if len(results[task_prompt][BBOXES_LABEL]) == 0:
                 if verbose:
                     print(f"No bbox detections were found after filfering results using "
                           f"the confidence score: {bbox_conf_score_threshold}")
@@ -709,7 +731,7 @@ class Sam2Florence2MGR:
 
         results = results[task_prompt]
         # parse florence-2 detection results
-        input_boxes = np.array(results["bboxes"])
+        input_boxes = np.array(results[BBOXES_LABEL])
         if verbose:
             print(results)
         class_names = results["bboxes_labels"]

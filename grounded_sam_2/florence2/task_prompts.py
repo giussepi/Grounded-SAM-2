@@ -21,8 +21,9 @@ class FlorenceTasks:
     RES = '<REFERRING_EXPRESSION_SEGMENTATION>'
 
     OPTIONS = (OD, OVD, DRC, RP, C2PG, RES)
-    # NOTE: having labels at the very beginning is necessary for the method
+    # NOTE: having labels at the very beginning is necessary for the methods in
     #       grounded_sam_2/florence2/manager.py -> Florence2MGR.print_bbox_labels_scores
+    #       grounded_sam_2/grounded_sam2_florence2_image_demo.py
     LABELS = {
         OD: ('labels', BBOXES_LABEL),
         OVD: ('bboxes_labels', BBOXES_LABEL, 'polygons_labels', 'polygons'),
