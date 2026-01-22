@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """ grounded_sam_2/florence2/manager.py """
 
+from collections import defaultdict
+from collections.abc import Iterable
 from copy import deepcopy
 
 import numpy as np
@@ -127,6 +129,76 @@ class Florence2MGR:
 
         # adding bboses confidence scores to the parsed_answer dictionary
         parsed_answer[task_prompt][BBOX_SCORES_LABEL] = score_split_arrays.tolist()
+
+    @staticmethod
+    def filter_parsed_answer_by_labels(
+            task_prompt: str,
+            parsed_answer: dict, /, *,
+            label_key: str,
+            filter_labels: Iterable[str],
+            masks: np.ndarray | None = None,
+            masks_scores: np.ndarray | None = None,
+            masks_logits: np.ndarray | None = None,
+    ) -> tuple:
+        """
+        Filters a parsed_answer, masks, scores and logits using the provided filter_labels
+
+        Kwargs:
+            task_prompt             <str>: one of FlorenceTasks defined in
+                                           grounded_sam_2/florence2/task_prompts.py
+            parsed_answer          <dict>: parsed_answer returned by the run method
+            label_key               <str>: key from parsed_answer containing the labels
+            filter_labels <Iterable[str]>: list of labels for data filtering
+            masks:       <np.ndarray|None>: masks returned by sam2_predictor.predict method
+                                           Default None
+            masks_scores <np.ndarray|None>: scores returned by sam2_predictor.predict method
+                                           Default None
+            masks_logits <np.ndarray|None>: logits returned by sam2_predictor.predict method
+                                           Default None
+        Returns:
+            (
+                filtered_parsed_answer <dict>,
+                filtered_masks         <np.ndarray | None>,
+                filtered_masks_scores  <np.ndarray | None>,
+                filtered_masks_logits  <np.ndarray | None>,
+            )
+        """
+        FlorenceTasks.validate(task_prompt)
+        assert isinstance(parsed_answer, dict), type(parsed_answer)
+        assert parsed_answer, 'parsed_answer cannot be empty'
+        assert isinstance(label_key, str), type(label_key)
+        assert label_key != '', 'label_key cannot be empty'
+        assert isinstance(filter_labels, Iterable), type(filter_labels)
+        assert len(filter_labels) > 0, 'filter_labels cannot be empty'
+        if masks is not None:
+            assert isinstance(masks, np.ndarray), type(masks)
+            assert masks.size > 0, 'masks cannot be empty'
+        if masks_scores is not None:
+            assert isinstance(masks_scores, np.ndarray), type(masks_scores)
+            assert masks_scores.size > 0, 'masks_scores cannot be empty'
+        if masks_logits is not None:
+            assert isinstance(masks_logits, np.ndarray), type(masks_logits)
+            assert masks_logits.size > 0, 'masks_logits cannot be empty'
+
+        filtered_parsed_answer = defaultdict(list)
+        filtered_idxs = []
+        filtered_masks = filtered_masks_scores = filtered_masks_logits = None
+        data = parsed_answer[task_prompt]
+
+        for idx, label in enumerate(data[label_key]):
+            if label in filter_labels:
+                for key in data.keys():
+                    filtered_parsed_answer[key].append(data[key][idx])
+                filtered_idxs.append(idx)
+
+        filtered_parsed_answer = {task_prompt: filtered_parsed_answer}
+
+        if masks is not None:
+            filtered_masks = masks[filtered_idxs]
+            filtered_masks_scores = masks_scores[filtered_idxs]
+            filtered_masks_logits = masks_logits[filtered_idxs]
+
+        return filtered_parsed_answer, filtered_masks, filtered_masks_scores, filtered_masks_logits
 
     @staticmethod
     def filter_bboxes_by_confidence(
