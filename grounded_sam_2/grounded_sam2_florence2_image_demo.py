@@ -2,6 +2,7 @@
 """ grounded_sam_2/grounded_sam2_florence2_image_demo.py """
 
 import os
+from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -165,7 +166,12 @@ class Sam2Florence2MGR:
 
         return florence2_mgr, sam2_model, sam2_predictor
 
-    def run_florence2(self, task_prompt, text_input, image) -> list:
+    def run_florence2(self, task_prompt: str, text_input: str | None, image: Image.Image) -> list:
+        FlorenceTasks.validate(task_prompt)
+        if text_input is not None:
+            assert isinstance(text_input, str), type(text_input)
+        assert isinstance(image, Image.Image), type(image)
+
         results = self.florence2_mgr(task_prompt, image, text_input)
 
         return results
@@ -193,7 +199,7 @@ class Sam2Florence2MGR:
                               processed. NOTE: It works better with RGB images.
             bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.5
                               Default None
-            filter_labels <Iterable[str]>: list of desired labels to filter the detections.
+            filter_labels <Iterable[str]>: iterable with the desired labels to filter the detections.
                               Default None
             verbose   <bool>: Whether or not print extra messages.
                               Default True
@@ -210,15 +216,18 @@ class Sam2Florence2MGR:
                 masks logits <ndarray | None>: ndarray [N, 1, 256, 256]
             )
         """
+        assert isinstance(image_path, (str, Image.Image)), type(image_path)
         if bbox_conf_score_threshold is not None:
             assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
         filter_labels = [] if filter_labels is None else filter_labels
-        assert isinstance(filter_labels, Iterable), type(filter_labels)
+        assert isinstance(filter_labels, (list, tuple, set)), type(filter_labels)
+        assert isinstance(verbose, bool), type(verbose)
+        assert isinstance(plot_detections, bool), type(plot_detections)
         assert isinstance(return_values, bool), type(return_values)
 
         # NOTE: text_input must be None when calling object detection pipeline.
         text_input = None
-        task_prompt = "<OD>"
+        task_prompt = FlorenceTasks.OD
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
         generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
@@ -330,7 +339,7 @@ class Sam2Florence2MGR:
         text_input=None,
     ):
         assert text_input is None, "Text input should be None when calling dense region caption pipeline."
-        task_prompt = "<DENSE_REGION_CAPTION>"
+        task_prompt = FlorenceTasks.DRC
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
         generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
@@ -405,7 +414,7 @@ class Sam2Florence2MGR:
         text_input=None,
     ):
         assert text_input is None, "Text input should be None when calling region proposal pipeline."
-        task_prompt = "<REGION_PROPOSAL>"
+        task_prompt = FlorenceTasks.RP
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
         generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
@@ -477,9 +486,13 @@ class Sam2Florence2MGR:
     def phrase_grounding_and_segmentation(
         self,
         image_path: str | Image.Image,
-        text_input=None,
+        text_input: str | None = None,
     ):
-        task_prompt = "<CAPTION_TO_PHRASE_GROUNDING>"
+        assert isinstance(image_path, (str, Image.Image)), type(image_path)
+        assert text_input is not None, "Text input should not be None when calling phrase grounding pipeline."
+        assert isinstance(text_input, str), type(text_input)
+
+        task_prompt = FlorenceTasks.C2PG
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
         generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
@@ -496,7 +509,6 @@ class Sam2Florence2MGR:
             }
         }
         """
-        assert text_input is not None, "Text input should not be None when calling phrase grounding pipeline."
         results = results[task_prompt]
         # parse florence-2 detection results
         input_boxes = np.array(results[BBOXES_LABEL])
@@ -552,9 +564,13 @@ class Sam2Florence2MGR:
     def referring_expression_segmentation(
         self,
         image_path: str | Image.Image,
-        text_input=None,
+        text_input: str | None = None,
     ):
-        task_prompt = "<REFERRING_EXPRESSION_SEGMENTATION>"
+        assert isinstance(image_path, (str, Image.Image)), type(image_path)
+        assert text_input is not None, "Text input should not be None when calling referring segmentation pipeline."
+        assert isinstance(text_input, str), type(text_input)
+
+        task_prompt = FlorenceTasks.RES
         # run florence-2 object detection in demo
         image = self.get_image(image_path)
         generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
@@ -567,7 +583,6 @@ class Sam2Florence2MGR:
             }
         }
         """
-        assert text_input is not None, "Text input should not be None when calling referring segmentation pipeline."
         results = results[task_prompt]
         # parse florence-2 detection results
         polygon_points = np.array(results["polygons"][0], dtype=np.int32).reshape(-1, 2)
@@ -657,50 +672,51 @@ class Sam2Florence2MGR:
     Pipeline 6: Open-Vocabulary Detection + Segmentation
     """
 
-    def open_vocabulary_detection_and_segmentation(
-        self,
-        image_path: str | Image.Image,
-        text_input,
-        bbox_conf_score_threshold: float | None = None,
-        verbose: bool = True,
-        plot_detections: bool = True,
-        return_values: bool = False,
-    ) -> tuple:
-        """
-        Kwargs:
-            image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
-                              processed. NOTE: It works better with RGB images.
-            text_input <str>: object to be found. Several objects can be specified
-                              using <and> separator. E.g. "person <and> crowd <and>
-                              football"
-            bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.5
-                              Default None
-            verbose   <bool>: Whether or not print extra messages.
-                              Default True
-            plot_detections <bool>: Whether or plot and save detections to disk.
-                              Default True
-            return_values <bool>: Whether or not return values.
-                              Default False
+    def get_atomic_text_input(self, text_input: str) -> list[str]:
+        """ returns a list[str] by splitting the text_input using the '<and>' separator"""
+        assert isinstance(text_input, str), type(text_input)
+        assert len(text_input) > 0
 
-        Returns:
-            tuple(
-                results         <dict | None>: dictionary containing 'bboxes', 'bboxes_labels',
-                                'polygons', 'polygons_labels'
-                masks        <ndarray | None>: binary ndarray [N, H, W]
-                masks scores <ndarray | None>: ndarray [N, 1]
-                masks logits <ndarray | None>: ndarray [N, 1, 256, 256]
-            )
+        atomic_input = [_.strip() for _ in text_input.lower().strip().split('<and>') if _.strip()]
+
+        return atomic_input
+
+    def _ovd_validate_text_input(self, atomic_query: bool, text_input: str | Iterable):
+        """ validates the text_input based on the atomic_query provided """
+        assert isinstance(atomic_query, bool), type(atomic_query)
+
+        if atomic_query:
+            assert isinstance(text_input, (str, Iterable)), type(text_input)
+        else:
+            assert isinstance(text_input, str), \
+                f'text_input({type(text_input)}) must be of type str when not using atomic queries'
+
+    def _ovd_florence2_query(
+            self,
+            task_prompt: str,
+            text_input: str,
+            image: Image.Image,
+            bbox_conf_score_threshold: float
+    ) -> dict:
         """
-        assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
+        runs a query over Florence2 and returns the results
+
+        Kwargs:
+            task_prompt   <str>: one of FlorenceTasks defined in
+                                 grounded_sam_2/florence2/task_prompts.py
+            text_input    <str>: input text for florence2. Several objects can be specified
+                                 using <and> separator. E.g. "person <and> audience <and> football"
+            image <Image.Image>: Pil.Image instance (RGB or grayscale) for florence2.
+                                 NOTE: It works better with RGB images.
+            bbox_conf_score_threshold <float>: bbox confidence score threshold. E.g. 0.2
+        """
+        FlorenceTasks.validate(task_prompt)
+        assert isinstance(text_input, str), type(text_input)
+        assert isinstance(image, Image.Image), type(image)
         if bbox_conf_score_threshold is not None:
             assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
-        assert isinstance(return_values, bool), type(return_values)
 
-        task_prompt = "<OPEN_VOCABULARY_DETECTION>"
-        # run florence-2 object detection in demo
-        image = self.get_image(image_path)
         generated_ids, _, results = self.run_florence2(task_prompt, text_input, image)
-
         """ Florence-2 Open-Vocabulary Detection Output Format
         {'<OPEN_VOCABULARY_DETECTION>':
             {
@@ -720,14 +736,117 @@ class Sam2Florence2MGR:
             self.florence2_mgr.filter_bboxes_by_confidence(
                 task_prompt, results, bbox_conf_score_threshold, inplace=True)
             # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
-            # returning if there are no results after applying the confidence threshold
-            if len(results[task_prompt][BBOXES_LABEL]) == 0:
-                if verbose:
-                    print(f"No bbox detections were found after filfering results using "
-                          f"the confidence score: {bbox_conf_score_threshold}")
-                if return_values:
-                    return None, None, None, None
-                return
+
+        return results
+
+    def _ovd_florence2_process(
+            self,
+            task_prompt: str,
+            text_input: str | Iterable,
+            image: Image.Image,
+            bbox_conf_score_threshold: float | None,
+            atomic_query: bool,
+    ) -> dict:
+        """
+        Kwargs:
+            task_prompt                 <str>: One of FlorenceTasks defined in
+                                               grounded_sam_2/florence2/task_prompts.py
+            text_input       <str | Iterable>: Object to be found. Several objects can be specified
+                              using <and> separator. E.g. "person <and> audience <and> football"
+                              When atomic_query is True, this parameter accepts an iterable too.
+                              E.g. ["person", "audience", "football"]
+            image               <Image.Image>: Pil.Image instance (RGB or grayscale) for florence2.
+                                               NOTE: It works better with RGB images.
+            bbox_conf_score_threshold <float>: bbox confidence score threshold. E.g. 0.2
+            atomic_query               <bool>: Whether or not execute individual queries per class.
+                                               NOTE: Atomic queries tend to return better indiviual
+                                               detections.
+        """
+        FlorenceTasks.validate(task_prompt)
+        self._ovd_validate_text_input(atomic_query, text_input)
+        assert isinstance(image, Image.Image), type(image)
+        if bbox_conf_score_threshold is not None:
+            assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
+        assert isinstance(atomic_query, bool), type(atomic_query)
+
+        if atomic_query:
+            text_input = self.get_atomic_text_input(text_input) if isinstance(text_input, str) else text_input
+        else:
+            text_input = [text_input]
+
+        results = defaultdict(list)
+
+        for cls in text_input:
+            cls_results = self._ovd_florence2_query(task_prompt, cls, image, bbox_conf_score_threshold)
+
+            if len(cls_results[task_prompt][BBOXES_LABEL]) > 0:
+                for k, v in cls_results[task_prompt].items():
+                    results[k].extend(v)
+
+        results = {task_prompt: results}
+
+        return results
+
+    def open_vocabulary_detection_and_segmentation(
+        self,
+        image_path: str | Image.Image,
+        text_input: str | Iterable,
+        bbox_conf_score_threshold: float | None = None,
+        atomic_query: bool = False,
+        verbose: bool = True,
+        plot_detections: bool = True,
+        return_values: bool = False,
+    ) -> tuple:
+        """
+        Kwargs:
+            image_path <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
+                              processed. NOTE: It works better with RGB images.
+            text_input <str | Iterable>: object to be found. Several objects can be specified
+                              using <and> separator. E.g. "person <and> audience <and> football"
+                              When atomic_query is True, this parameter accepts an iterable too.
+                              E.g. ["person", "audience", "football"]
+            bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.2
+                              Default None
+            atomic_query <bool>: Whether or not execute individual queries per class.
+                              NOTE: Atomic queries tend to return better indiviual detections.
+                              Default False
+            verbose   <bool>: Whether or not print extra messages.
+                              Default True
+            plot_detections <bool>: Whether or plot and save detections to disk.
+                              Default True
+            return_values <bool>: Whether or not return values.
+                              Default False
+
+        Returns:
+            tuple(
+                results         <dict | None>: dictionary containing 'bboxes', 'bboxes_labels',
+                                'polygons', 'polygons_labels'
+                masks        <ndarray | None>: binary ndarray [N, H, W]
+                masks scores <ndarray | None>: ndarray [N, 1]
+                masks logits <ndarray | None>: ndarray [N, 1, 256, 256]
+            )
+        """
+        assert isinstance(image_path, (str, Image.Image)), type(image_path)
+        assert isinstance(atomic_query, bool), type(atomic_query)
+        assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
+        self._ovd_validate_text_input(atomic_query, text_input)
+        if bbox_conf_score_threshold is not None:
+            assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
+        assert isinstance(verbose, bool), type(verbose)
+        assert isinstance(plot_detections, bool), type(plot_detections)
+        assert isinstance(return_values, bool), type(return_values)
+
+        task_prompt = FlorenceTasks.OVD
+        # run florence-2 object detection in demo
+        image = self.get_image(image_path)
+        results = self._ovd_florence2_process(task_prompt, text_input, image, bbox_conf_score_threshold, atomic_query)
+
+        if len(results[task_prompt][BBOXES_LABEL]) == 0:
+            if verbose:
+                print("No bbox detections were found")
+            if return_values:
+                return None, None, None, None
+            return
 
         results = results[task_prompt]
         # parse florence-2 detection results
@@ -796,7 +915,7 @@ class Sam2Florence2MGR:
                               Default: './notebooks/images/cars.jpg'
             pipeline   <str>: pipeline name to be executed.
                               Default: 'object_detection_segmentation'
-            input_text <str>: pipeline input text.
+            input_text <str | Iterable>: pipeline input text.
                               Default None
         """
         assert isinstance(image_path, (str, Image.Image)), type(image_path)
@@ -807,7 +926,7 @@ class Sam2Florence2MGR:
             assert Path(image_path).is_file(), image_path
         assert isinstance(pipeline, str), type(pipeline)
         if input_text is not None:
-            assert isinstance(input_text, str), type(input_text)
+            assert isinstance(input_text, (str, Iterable)), type(input_text)
         kwargs['verbose'] = kwargs.get('verbose', True)
         assert isinstance(kwargs['verbose'], bool), type(kwargs['verbose'])
 

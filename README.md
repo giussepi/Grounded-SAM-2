@@ -69,7 +69,8 @@ results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
     image_path=image_path,
     pipeline="open_vocabulary_detection_segmentation",
     input_text="person <and> audience <and> football",
-	bbox_conf_score_threshold=None,
+	bbox_conf_score_threshold=None, # .2
+	atomic_query=True,
     verbose=True,
     plot_detections=True,
     return_values=True,
@@ -102,6 +103,7 @@ Sam2Florence2MGR()(
 
 ## TODO:
 * Update `grounded_sam_2/grounded_sam2_florence2_image_demo.py->Sam2Florence2MGR`
+  - [ ] Enable atomic queries in <CAPTION_TO_PHRASE_GROUNDING> and <REFERRING_EXPRESSION_SEGMENTATION>
   - [x] object_detection_and_segmentation
   - [ ] dense_region_caption_and_segmentation
   - [ ] region_proposal_and_segmentation

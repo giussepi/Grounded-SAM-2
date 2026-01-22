@@ -36,6 +36,8 @@ class FlorenceTasks:
     @staticmethod
     def clean_option(option: str) -> str:
         """ returns the option ready for matching """
+        assert isinstance(option, str), type(option)
+
         return option.strip()
 
     @classmethod
