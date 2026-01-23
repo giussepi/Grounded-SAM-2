@@ -12,7 +12,7 @@ import supervision as sv
 import torch
 from PIL import Image
 
-from grounded_sam_2.florence2.constants import BBOXES_LABEL
+from grounded_sam_2.florence2.constants import BBOXES_LABEL, BBOX_SCORES_LABEL
 from grounded_sam_2.florence2.manager import Florence2MGR
 from grounded_sam_2.florence2.task_prompts import FlorenceTasks
 from grounded_sam_2.sam2.build_sam import build_sam2
@@ -972,3 +972,22 @@ class Sam2Florence2MGR:
             case _:
                 raise NotImplementedError(
                     f"Pipeline: {pipeline} is not implemented at this time")
+
+    @staticmethod
+    def print_labels_scores(
+            results: dict, /, *, labels_key: str = 'labels', scores_key: str = BBOX_SCORES_LABEL):
+        """
+        Kwargs:
+            results   <dict>: results or parsed_answer returned by one of the pipelines
+            labels_key <str>: results label key.
+                              Default labels
+            scores_key <str>: results scores key.
+                              Default BBOX_SCORES_LABEL
+        """
+        assert isinstance(results, dict), type(results)
+        assert isinstance(labels_key, str), type(labels_key)
+        assert isinstance(scores_key, str), type(scores_key)
+
+        print(f"TOTAL LABELS: {len(results[labels_key])}")
+        for label, score in zip(results[labels_key], results[scores_key]):
+            print(f'{label}: {score}')
