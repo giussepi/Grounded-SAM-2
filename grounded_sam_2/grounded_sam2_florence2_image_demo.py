@@ -975,7 +975,11 @@ class Sam2Florence2MGR:
 
     @staticmethod
     def print_labels_scores(
-            results: dict, /, *, labels_key: str = 'labels', scores_key: str = BBOX_SCORES_LABEL):
+            results: dict, /, *,
+            labels_key: str = 'labels',
+            scores_key: str = BBOX_SCORES_LABEL,
+            prepend_msg: str = ''
+    ):
         """
         Kwargs:
             results   <dict>: results or parsed_answer returned by one of the pipelines
@@ -983,11 +987,16 @@ class Sam2Florence2MGR:
                               Default labels
             scores_key <str>: results scores key.
                               Default BBOX_SCORES_LABEL
+            prepend_msg <str>: words to be added the the begining of the printed message.
+                              Default ''
         """
         assert isinstance(results, dict), type(results)
         assert isinstance(labels_key, str), type(labels_key)
         assert isinstance(scores_key, str), type(scores_key)
+        assert isinstance(prepend_msg, str), type(prepend_msg)
 
-        print(f"TOTAL LABELS: {len(results[labels_key])}")
+        prepend_msg = f'{prepend_msg} ' if prepend_msg else ''
+        print(f"{prepend_msg}TOTAL LABELS: {len(results[labels_key])}")
+
         for label, score in zip(results[labels_key], results[scores_key]):
             print(f'{label}: {score}')
