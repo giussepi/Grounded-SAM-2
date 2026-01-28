@@ -11,5 +11,5 @@ timm>=1.0.22
 # torch>=2.3.1 # install it following https://pytorch.org/get-started/locally/
 # torchvision>=0.18.1 # install it following https://pytorch.org/get-started/locally/
 tqdm>=4.66.1
-transformers>=4.57.6
+transformers>=4.57.6,<5.0.0
 yapf>=0.43.0
