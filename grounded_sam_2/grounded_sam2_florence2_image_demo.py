@@ -3,7 +3,7 @@
 
 import os
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Callable
 from pathlib import Path
 
 import cv2
@@ -11,12 +11,15 @@ import numpy as np
 import supervision as sv
 import torch
 from PIL import Image
+from tabulate import tabulate
 
 from grounded_sam_2.florence2.constants import BBOXES_LABEL, BBOX_SCORES_LABEL
 from grounded_sam_2.florence2.manager import Florence2MGR
 from grounded_sam_2.florence2.task_prompts import FlorenceTasks
 from grounded_sam_2.sam2.build_sam import build_sam2
 from grounded_sam_2.sam2.sam2_image_predictor import SAM2ImagePredictor
+from grounded_sam_2.sam3.model_builder import build_sam3_image_model
+from grounded_sam_2.sam3.model.sam3_image_processor import Sam3Processor
 
 
 __all__ = [
@@ -86,6 +89,11 @@ class Sam2Florence2MGR:
                  florence2_model_id: str = "florence-community/Florence-2-large",
                  sam2_checkpoint: str = "sam2.1_hiera_large.pt",
                  sam2_config: str = "sam2.1_hiera_l.yaml",
+                 sam2_enabled: bool = True,
+                 sam3_enabled: bool = True,
+                 sam3_processor_kwargs: dict | None = None,
+                 verbose: bool = True,
+                 print_fn: Callable = print,
                  ):
         """
         Initializes the Sam2Florence2MGR manager.
@@ -102,23 +110,50 @@ class Sam2Florence2MGR:
             sam2_config <str>: one of the YAML config files located at
                               "grounded_sam_2/sam2/configs/sam2.1/"
                               Default "sam2.1_hiera_l.yaml"
+            sam2_enabled <bool>: Whether or not load sam2. Default True
+            sam3_enabled <bool>: Whether or not load sam3. Default True
+            sam3_processor_kwargs <dict>: dictionary containing the resolution and confidence_threshold for
+                              Sam3Processor. Defaut dict(resolution=1008, confidence_threshold=0.5)
+            verbose      <bool>: Whether or not print messages.
+                              Default True
+            print_fn <Callable>: custom print function.
+                              Default print
         """
         assert isinstance(output_dir, str), type(output_dir)
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
         assert isinstance(florence2_model_id, str), type(florence2_model_id)
-        sam2_checkpoint = os.path.join(
-            CURRENT_DIR, "checkpoints", sam2_checkpoint
-        )
+        sam2_checkpoint = os.path.join(CURRENT_DIR, "checkpoints", sam2_checkpoint)
         assert Path(sam2_checkpoint).is_file(), sam2_checkpoint
         sam2_config = os.path.join("configs", "sam2.1", sam2_config)
         assert (Path(CURRENT_DIR)/"sam2"/sam2_config).is_file(), sam2_config
+        assert isinstance(sam2_enabled, bool), type(sam2_enabled)
+        assert isinstance(sam3_enabled, bool), type(sam3_enabled)
+        assert sam2_enabled or sam3_enabled, 'At least one SAM model must be enabled'
+        sam3_processor_kwargs = sam3_processor_kwargs if isinstance(
+            sam3_processor_kwargs, dict) else {'resolution': 1008, 'confidence_threshold': 0.5}
+        assert isinstance(sam3_processor_kwargs, dict), type(sam3_processor_kwargs)
+        assert 'resolution' in sam3_processor_kwargs
+        assert 'confidence_threshold' in sam3_processor_kwargs
+        assert len(sam3_processor_kwargs) == 2, \
+            "sam3_processor_kwargs must contain only 'resolution' and 'confidence_threshold' keys"
+        assert isinstance(verbose, bool), type(verbose)
+        assert callable(print_fn)
+        sam3_bpe_path = os.path.join(CURRENT_DIR, "sam3", "assets", "bpe_simple_vocab_16e6.txt.gz")
+        assert Path(sam3_bpe_path).is_file(), sam3_bpe_path
+        self.sam3_bpe_path = sam3_bpe_path
 
         self.florence2_model_id = florence2_model_id
         self.sam2_checkpoint = sam2_checkpoint
         self.sam2_config = sam2_config
+        self.sam2_enabled = sam2_enabled
+        self.sam3_enabled = sam3_enabled
+        self.sam3_processor_kwargs = sam3_processor_kwargs.copy()
+        self.verbose = verbose
+        self.print_fn = print_fn
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.florence2_mgr, self.sam2_model, self.sam2_predictor = self.build_models()
+        self.florence2_mgr, self.sam2_model, self.sam2_predictor, self.sam3_model, self.sam3_processor = \
+            self.build_models()
 
     def __call__(self, *,
                  image_path: str = "./grounded_sam_2/notebooks/images/cars.jpg",
@@ -151,20 +186,51 @@ class Sam2Florence2MGR:
 
         return image
 
+    def _print(self, *args, always_print: bool = False,  **kwargs):
+        """
+        if verbose or always is True, then prints arguments using print or a print function provided
+
+        Kwargs:
+            always_print <bool>: Whether or not always print despite the value of self.verbose
+                           Default False
+        """
+        assert isinstance(always_print, bool), type(always_print)
+
+        if self.verbose or always_print:
+            self.print_fn(*args, **kwargs)
+
     def build_models(self) -> tuple:
         """
         Returns:
-            florence2_model, florence2_processor, sam2_model, sam2_predictor
+            florence2_model, florence2_processor, sam2_model, sam2_predictor, sam3_model, sam3_processor
         """
-        # build florence-2
-        florence2_mgr = Florence2MGR(self.florence2_model_id, self.device)
+        florence2_mgr = sam2_model = sam2_predictor = sam3_model = sam3_processor = None
 
-        # build sam 2
-        sam2_model = build_sam2(
-            self.sam2_config, self.sam2_checkpoint, device=self.device)
-        sam2_predictor = SAM2ImagePredictor(sam2_model)
+        self._print("Building models: IN PROGRESS")
+        if self.sam2_enabled:
+            # build florence-2 ####################################################
+            self._print("+ FLORENCE2")
+            florence2_mgr = Florence2MGR(self.florence2_model_id, self.device)
 
-        return florence2_mgr, sam2_model, sam2_predictor
+            # build sam2 ##########################################################
+            self._print("+ SAM2")
+            sam2_model = build_sam2(
+                self.sam2_config, self.sam2_checkpoint, device=self.device)
+            sam2_predictor = SAM2ImagePredictor(sam2_model)
+
+        if self.sam3_enabled:
+            # build sam3 ##########################################################
+            self._print("+ SAM3")
+            sam3_model = build_sam3_image_model(bpe_path=self.sam3_bpe_path)
+            sam3_processor = Sam3Processor(
+                sam3_model,
+                resolution=self.sam3_processor_kwargs['resolution'],
+                device=self.device,
+                confidence_threshold=self.sam3_processor_kwargs['confidence_threshold'],
+            )
+        self._print("Building models: COMPLETE")
+
+        return florence2_mgr, sam2_model, sam2_predictor, sam3_model, sam3_processor
 
     def run_florence2(self, task_prompt: str, text_input: str | None, image: Image.Image) -> list:
         FlorenceTasks.validate(task_prompt)
@@ -189,7 +255,6 @@ class Sam2Florence2MGR:
         image_path: str | Image.Image,
         bbox_conf_score_threshold: float | None = None,
         filter_labels: Iterable[str] = None,
-        verbose: bool = True,
         plot_detections: bool = True,
         return_values: bool = False,
     ) -> tuple:
@@ -201,8 +266,6 @@ class Sam2Florence2MGR:
                               Default None
             filter_labels <Iterable[str]>: iterable with the desired labels to filter the detections.
                               Default None
-            verbose   <bool>: Whether or not print extra messages.
-                              Default True
             plot_detections <bool>: Whether or plot and save detections to disk.
                               Default True
             return_values <bool>: Whether or not return values.
@@ -221,7 +284,6 @@ class Sam2Florence2MGR:
             assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
         filter_labels = [] if filter_labels is None else filter_labels
         assert isinstance(filter_labels, (list, tuple, set)), type(filter_labels)
-        assert isinstance(verbose, bool), type(verbose)
         assert isinstance(plot_detections, bool), type(plot_detections)
         assert isinstance(return_values, bool), type(return_values)
 
@@ -256,9 +318,8 @@ class Sam2Florence2MGR:
             # self.florence2_mgr.print_bbox_labels_scores(task_prompt, results) # For debugging
             # returning if there are no results after applying the confidence threshold
             if len(results[task_prompt][BBOXES_LABEL]) == 0:
-                if verbose:
-                    print(f"No detections were found after filfering results using "
-                          f"bbox the confidence score: {bbox_conf_score_threshold}")
+                self._print(f"No detections were found after filfering results using "
+                            f"bbox the confidence score: {bbox_conf_score_threshold}")
                 if return_values:
                     return None, None, None, None
                 return
@@ -270,9 +331,8 @@ class Sam2Florence2MGR:
                 task_prompt, results, label_key=bbox_labels_key, filter_labels=filter_labels)[0]
             # returning if there are no results after applying label filtration
             if len(results[task_prompt][BBOXES_LABEL]) == 0:
-                if verbose:
-                    print(f"No detections were found after filfering results by "
-                          f"labels: {filter_labels}")
+                self._print(f"No detections were found after filfering results by "
+                            f"labels: {filter_labels}")
                 if return_values:
                     return None, None, None, None
                 return
@@ -280,8 +340,7 @@ class Sam2Florence2MGR:
         results = results[task_prompt]
         # parse florence-2 detection results
         input_boxes = np.array(results[BBOXES_LABEL])
-        if verbose:
-            print(results)
+        self._print(results)  # For debugging
         class_names = results["labels"]
         class_ids = np.array(list(range(len(class_names))))
 
@@ -323,8 +382,7 @@ class Sam2Florence2MGR:
             annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
             cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_image_with_mask.jpg"), annotated_frame)
 
-            if verbose:
-                print(f'Successfully save annotated image to "{self.output_dir}"')
+            self._print(f'Successfully save annotated image to "{self.output_dir}"')
 
         if return_values:
             return results, masks, scores, logits
@@ -402,7 +460,7 @@ class Sam2Florence2MGR:
         annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
         cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_dense_region_cap_image_with_mask.jpg"), annotated_frame)
 
-        print(f'Successfully save annotated image to "{self.output_dir}"')
+        self._print(f'Successfully save annotated image to "{self.output_dir}"')
 
     """
     Pipeline 3: Region Proposal + Segmentation
@@ -477,7 +535,7 @@ class Sam2Florence2MGR:
         annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
         cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_region_proposal_with_mask.jpg"), annotated_frame)
 
-        print(f'Successfully save annotated image to "{self.output_dir}"')
+        self._print(f'Successfully save annotated image to "{self.output_dir}"')
 
     """
     Pipeline 4: Phrase Grounding + Segmentation
@@ -552,7 +610,7 @@ class Sam2Florence2MGR:
         annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
         cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_phrase_grounding_with_mask.jpg"), annotated_frame)
 
-        print(f'Successfully save annotated image to "{self.output_dir}"')
+        self._print(f'Successfully save annotated image to "{self.output_dir}"')
 
     """
     Pipeline 5: Referring Expression Segmentation
@@ -593,7 +651,7 @@ class Sam2Florence2MGR:
         img_width, img_height = image.size[0], image.size[1]
         florence2_mask = np.zeros((img_height, img_width), dtype=np.uint8)
         if len(polygon_points) < 3:
-            print("Invalid polygon:", polygon_points)
+            self._print("Invalid polygon:", polygon_points)
             exit()
         cv2.fillPoly(florence2_mask, [polygon_points], 1)
         if florence2_mask.ndim == 2:
@@ -644,7 +702,7 @@ class Sam2Florence2MGR:
         annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
         cv2.imwrite(os.path.join(self.output_dir, "florence2_referring_segmentation_box_with_mask.jpg"), annotated_frame)
 
-        print(f'Successfully save florence-2 annotated image to "{self.output_dir}"')
+        self._print(f'Successfully save florence-2 annotated image to "{self.output_dir}"')
 
         # visualize sam2 mask
         img = np.array(image)
@@ -666,7 +724,7 @@ class Sam2Florence2MGR:
         annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
         cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_referring_box_with_sam2_mask.jpg"), annotated_frame)
 
-        print(f'Successfully save sam2 annotated image to "{self.output_dir}"')
+        self._print(f'Successfully save sam2 annotated image to "{self.output_dir}"')
 
     """
     Pipeline 6: Open-Vocabulary Detection + Segmentation
@@ -680,6 +738,13 @@ class Sam2Florence2MGR:
         atomic_input = [_.strip() for _ in text_input.lower().strip().split('<and>') if _.strip()]
 
         return atomic_input
+
+    def validate_sam3(self):
+        """ validates sam3 is available """
+        assert self.sam3_enabled, \
+            'Using sam3 requires building a instance of Sam2Florence2MGR with sam3_enabled=True'
+        assert self.sam3_model is not None
+        assert self.sam3_processor is not None
 
     def _ovd_validate_text_input(self, atomic_query: bool, text_input: str | Iterable):
         """ validates the text_input based on the atomic_query provided """
@@ -787,15 +852,177 @@ class Sam2Florence2MGR:
 
         return results
 
+    def _ovd_process_with_florence2(
+        self,
+        image: str | Image.Image,
+        text_input: str | Iterable,
+        bbox_conf_score_threshold: float | None = None,
+        return_values: bool = False,
+        atomic_query: bool = False,
+    ) -> tuple[dict | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+        """
+        Performs open_vocabulary_detection using florence2 and sam2
+
+        Kwargs:
+            image   <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
+                              processed. NOTE: It works better with RGB images.
+            text_input <str | Iterable>: object to be found. Several objects can be specified
+                              using <and> separator. E.g. "person <and> audience <and> football"
+                              When atomic_query is True, this parameter accepts an iterable too.
+                              E.g. ["person", "audience", "football"]
+            bbox_conf_score_threshold <float | None>: bbox confidence score threshold. E.g. 0.2
+                              Default None
+            return_values <bool>: Whether or not return values.
+                              Default False
+            atomic_query <bool>: Whether or not execute individual queries per class.
+                              NOTE: Atomic queries tend to return better indiviual detections.
+                              Default False
+
+        Returns:
+            tuple(
+                results         <dict | None>: dictionary containing 'bboxes', 'bboxes_labels',
+                                'polygons', 'polygons_labels'
+                masks        <ndarray | None>: binary ndarray [N, H, W]
+                masks scores <ndarray | None>: ndarray [N, 1]
+                masks logits <ndarray | None>: ndarray [N, 1, H, W]
+                input_boxes  <ndarray | None>: ndarray [N, 4]
+            )
+        """
+        assert isinstance(image, (str, Image.Image)), type(image)
+        assert isinstance(atomic_query, bool), type(atomic_query)
+        assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
+        self._ovd_validate_text_input(atomic_query, text_input)
+        if bbox_conf_score_threshold is not None:
+            assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
+        assert isinstance(return_values, bool), type(return_values)
+
+        task_prompt = FlorenceTasks.OVD
+
+        # Getting RGB PIL IMAGE ###############################################
+        image = self.get_image(image)
+
+        # run florence-2 object detection in demo #############################
+        results = self._ovd_florence2_process(task_prompt, text_input, image, bbox_conf_score_threshold, atomic_query)
+
+        # return if no detections  ############################################
+        if len(results[task_prompt][BBOXES_LABEL]) == 0:
+            self._print("No bbox detections were found")
+            if return_values:
+                return None, None, None, None, None
+            return
+
+        # parse florence-2 detection results ##################################
+        results = results[task_prompt]
+        input_boxes = np.array(results[BBOXES_LABEL])
+
+        # predict mask with SAM 2 #############################################
+        self.sam2_predictor.set_image(np.array(image))
+        masks, scores, logits = self.sam2_predictor.predict(
+            point_coords=None,
+            point_labels=None,
+            box=input_boxes,
+            multimask_output=False,
+        )
+
+        return results, masks, scores, logits, input_boxes
+
+    def _ovd_process_with_sam3(
+        self,
+        image: str | Image.Image,
+        text_input: str | Iterable,
+        conf_threshold: float | None = None,
+        return_values: bool = False,
+        **kwargs
+    ) -> tuple[dict | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+        """
+        Performs open_vocabulary_detection using sam3
+
+        NOTES:
+          1. Atomic queries are always used with this model.
+          2. Based on Sam3Processor._forward_grounding, the out_probs seems to be shared by pred_boxes
+             and pred_masks; therefore, we are considering that the sam3 returned scores are the same
+             for masks and boxes, i.e., results['bboxes_scores'] and scores have the same values.
+
+        Kwargs:
+            image   <str | Image.Image>: PIL.Image instance (RGB or grayscale) or path to image to be
+                              processed. NOTE: It works better with RGB images.
+            text_input <str | Iterable>: object to be found. Several objects can be specified
+                              using <and> separator. E.g. "person <and> audience <and> football"
+                              An iterable or strings is accepted too. E.g. ["person", "audience", "football"]
+            conf_threshold <float | None>: confidence threshold for boxes and masks. E.g. 0.2.
+                              NOTE: If provided, the value updates self.sam3_processor.confidence_threshold
+                              Default None
+            return_values        <bool>: Whether or not return values.
+                              Default False
+
+        Returns:
+            tuple(
+                results         <dict | None>: dictionary containing 'bboxes', 'bboxes_labels',
+                                               and'bboxes_scores'
+                masks        <ndarray | None>: binary ndarray [N, H, W]
+                scores       <ndarray | None>: ndarray [N, 1]
+                masks_logits <ndarray | None>: ndarray [N, 1, H, W]
+                boxes        <ndarray | None>: ndarray [N, 4]
+            )
+        """
+        self.validate_sam3()
+        assert isinstance(image, (str, Image.Image)), type(image)
+        assert text_input is not None, "Text input should not be None when calling open-vocabulary detection pipeline."
+        self._ovd_validate_text_input(atomic_query=True, text_input=text_input)
+        if conf_threshold is not None:
+            assert isinstance(conf_threshold, float), type(conf_threshold)
+            # Updating sam3 processor threshold ###############################
+            self.sam3_processor.set_confidence_threshold(conf_threshold)
+        assert isinstance(return_values, bool), type(return_values)
+
+        # Getting RGB PIL IMAGE ###############################################
+        image = self.get_image(image)
+
+        # getting atomic query ################################################
+        text_input = self.get_atomic_text_input(text_input) if isinstance(text_input, str) else text_input
+
+        # Prompting the model with atomic queries #############################
+        all_outputs = defaultdict(list)
+        results = masks = scores = masks_logits = boxes = None
+        inference_state = self.sam3_processor.set_image(image)
+
+        for query in text_input:
+            query_results = self.sam3_processor.set_text_prompt(prompt=query, state=inference_state)
+
+            if query_results['masks'].numel() > 0:
+                all_outputs['labels'].extend([query]*query_results['scores'].numel())
+                all_outputs['masks'].append(query_results['masks'].detach().cpu().squeeze(1))
+                all_outputs['boxes'].append(query_results['boxes'].detach().cpu())
+                all_outputs['scores'].append(query_results['scores'].detach().cpu().unsqueeze(1))
+                all_outputs['masks_logits'].append(query_results['masks_logits'].detach().cpu())
+                # NOTE: the following line does not seem to be necessary, but it's not hurt either
+                self.sam3_processor.reset_all_prompts(inference_state)
+
+        # Consolidating and formatting results ################################
+        # ensuring the output has the same structure that _ovd_process_with_florence2 method output
+        if all_outputs:
+            masks = torch.cat(all_outputs['masks'], 0).numpy().astype(np.float32)
+            # float cast to avoid: numpy TypeError: Got unsupported ScalarType BFloat16
+            scores = torch.cat(all_outputs['scores'], 0).float().numpy()
+            boxes = torch.cat(all_outputs['boxes'], 0).numpy()
+            masks_logits = torch.cat(all_outputs['masks_logits'], 0).numpy()
+            results = {
+                BBOXES_LABEL: boxes.tolist(),  # boxes
+                FlorenceTasks.get_parsing_labels(FlorenceTasks.OVD)[0]: all_outputs['labels'],  # labels
+                BBOX_SCORES_LABEL: scores.squeeze(1).tolist(),  # scores
+            }
+
+        return results, masks, scores, masks_logits, boxes
+
     def open_vocabulary_detection_and_segmentation(
         self,
         image_path: str | Image.Image,
         text_input: str | Iterable,
         bbox_conf_score_threshold: float | None = None,
         atomic_query: bool = False,
-        verbose: bool = True,
         plot_detections: bool = True,
         return_values: bool = False,
+        use_sam3: bool = False
     ) -> tuple:
         """
         Kwargs:
@@ -810,8 +1037,6 @@ class Sam2Florence2MGR:
             atomic_query <bool>: Whether or not execute individual queries per class.
                               NOTE: Atomic queries tend to return better indiviual detections.
                               Default False
-            verbose   <bool>: Whether or not print extra messages.
-                              Default True
             plot_detections <bool>: Whether or plot and save detections to disk.
                               Default True
             return_values <bool>: Whether or not return values.
@@ -823,7 +1048,7 @@ class Sam2Florence2MGR:
                                 'polygons', 'polygons_labels'
                 masks        <ndarray | None>: binary ndarray [N, H, W]
                 masks scores <ndarray | None>: ndarray [N, 1]
-                masks logits <ndarray | None>: ndarray [N, 1, 256, 256]
+                masks logits <ndarray | None>: ndarray [N, 1, H, W]
             )
         """
         assert isinstance(image_path, (str, Image.Image)), type(image_path)
@@ -832,43 +1057,31 @@ class Sam2Florence2MGR:
         self._ovd_validate_text_input(atomic_query, text_input)
         if bbox_conf_score_threshold is not None:
             assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
-        assert isinstance(verbose, bool), type(verbose)
         assert isinstance(plot_detections, bool), type(plot_detections)
         assert isinstance(return_values, bool), type(return_values)
+        assert isinstance(use_sam3, bool), type(use_sam3)
 
-        task_prompt = FlorenceTasks.OVD
-        # run florence-2 object detection in demo
+        # Getting RGB PIL IMAGE ###############################################
         image = self.get_image(image_path)
-        results = self._ovd_florence2_process(task_prompt, text_input, image, bbox_conf_score_threshold, atomic_query)
 
-        if len(results[task_prompt][BBOXES_LABEL]) == 0:
-            if verbose:
-                print("No bbox detections were found")
-            if return_values:
-                return None, None, None, None
-            return
+        # Processing data with selected models ################################
+        ovd_processor = self._ovd_process_with_sam3 if use_sam3 else self._ovd_process_with_florence2
+        results, masks, scores, logits, input_boxes = ovd_processor(
+            image, text_input, bbox_conf_score_threshold, return_values=True, atomic_query=atomic_query)
 
-        results = results[task_prompt]
-        # parse florence-2 detection results
-        input_boxes = np.array(results[BBOXES_LABEL])
-        if verbose:
-            print(results)
-        class_names = results["bboxes_labels"]
-        class_ids = np.array(list(range(len(class_names))))
+        if results is None:
+            return None, None, None, None
 
-        # predict mask with SAM 2
-        self.sam2_predictor.set_image(np.array(image))
-        masks, scores, logits = self.sam2_predictor.predict(
-            point_coords=None,
-            point_labels=None,
-            box=input_boxes,
-            multimask_output=False,
-        )
+        self._print(results)  # For debugging
 
         if masks.ndim == 4:
             masks = masks.squeeze(1)
 
+        # Plotting resuls #####################################################
         if plot_detections:
+            class_names = results["bboxes_labels"]
+            class_ids = np.array(list(range(len(class_names))))
+
             # specify labels
             labels = [
                 f"{class_name}" for class_name in class_names
@@ -895,8 +1108,7 @@ class Sam2Florence2MGR:
             cv2.imwrite(os.path.join(self.output_dir,
                         "grounded_sam2_florence2_open_vocabulary_detection_with_mask.jpg"), annotated_frame)
 
-            if verbose:
-                print(f'Successfully save annotated image to "{self.output_dir}"')
+            self._print(f'Successfully save annotated image to "{self.output_dir}"')
 
         if return_values:
             return results, masks, scores, logits
@@ -927,11 +1139,8 @@ class Sam2Florence2MGR:
         assert isinstance(pipeline, str), type(pipeline)
         if input_text is not None:
             assert isinstance(input_text, (str, Iterable)), type(input_text)
-        kwargs['verbose'] = kwargs.get('verbose', True)
-        assert isinstance(kwargs['verbose'], bool), type(kwargs['verbose'])
 
-        if kwargs['verbose']:
-            print(f"Running pipeline: {pipeline} now.")
+        self._print(f"Running pipeline: {pipeline} now.")
 
         match pipeline:
             case "object_detection_segmentation":
@@ -973,30 +1182,42 @@ class Sam2Florence2MGR:
                 raise NotImplementedError(
                     f"Pipeline: {pipeline} is not implemented at this time")
 
-    @staticmethod
-    def print_labels_scores(
-            results: dict, /, *,
-            labels_key: str = 'labels',
-            scores_key: str = BBOX_SCORES_LABEL,
+    def print_results_as_table(
+            self,
+            results: dict | None = None, /, *,
+            keys: list | None = None,
             prepend_msg: str = ''
     ):
         """
+        Prints results as a table
+
         Kwargs:
-            results   <dict>: results or parsed_answer returned by one of the pipelines
-            labels_key <str>: results label key.
-                              Default labels
-            scores_key <str>: results scores key.
-                              Default BBOX_SCORES_LABEL
-            prepend_msg <str>: words to be added the the begining of the printed message.
-                              Default ''
+            results   <dict|None>: results or parsed_answer returned by one of the pipelines
+                                   Default | None
+            keys      <list[str]>: Select keys to print.
+                                   Default None
+            prepend_msg     <str>: words to be added the the begining of the printed message.
+                                   Default ''
         """
-        assert isinstance(results, dict), type(results)
-        assert isinstance(labels_key, str), type(labels_key)
-        assert isinstance(scores_key, str), type(scores_key)
         assert isinstance(prepend_msg, str), type(prepend_msg)
-
         prepend_msg = f'{prepend_msg} ' if prepend_msg else ''
-        print(f"{prepend_msg}TOTAL LABELS: {len(results[labels_key])}")
 
-        for label, score in zip(results[labels_key], results[scores_key]):
-            print(f'{label}: {score}')
+        if results is None:
+            self._print(f"{prepend_msg}RESULTS: 0", always_print=True)
+            return
+
+        assert isinstance(results, dict), type(results)
+        keys = [] if keys is None else keys
+        assert isinstance(keys, list), type(keys)
+
+        if keys and results:
+            results = {key: results[key] for key in keys}
+
+        if results:
+            self._print(f"{prepend_msg}RESULTS", always_print=True)
+            self._print(
+                tabulate(results, headers="keys", showindex=True, tablefmt='presto', floatfmt=".2f"),
+                always_print=True,
+            )
+        else:
+            self._print(f"{prepend_msg}RESULTS: 0", always_print=True)

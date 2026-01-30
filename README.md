@@ -29,11 +29,14 @@ Grounded SAM 2 does not introduce significant methodological changes compared to
    - If you get the following error: `AttributeError: install_layout. Did you mean: 'install_platlib'?`
 	   * [Solution](https://github.com/lasp/cdflib/issues/167#issuecomment-1234019321)
        * run `export SETUPTOOLS_USE_DISTUTILS=stdlib` in a terminal
-4. Open a python shell and download the pretrained weights by importing the following modules:
+4. Open a python shell and download SAM 2 pretrained weights by importing the following modules:
    ```
    from grounded_sam_2 import download_pretrained_sam2
    # from grounded_sam_2 import download_pretrained_grounding_dino # not necessary for now
    ```
+5. Using SAM 3 checkpoints requires access to its Hugging Face [repo](https://huggingface.co/facebook/sam3):
+   1. Log in to you Hugging Face account, request access and wait for approval
+   2. Authenticate yourself to access the checkpoints. Follow the instructions in [this page.](https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication)
 
 ## Uninstallation
 1. Use PIP
@@ -63,27 +66,38 @@ image_path = PIL.Image.fromarray(cv2.imread("<image_path>", 0))
 image_path = PIL.Image.fromarray(cv2.imread("<image_path>")[:, :, ::-1])
 
 
-sm_mgr = Sam2Florence2MGR()
+sm_mgr = Sam2Florence2MGR(
+    sam2_enabled=True,
+    sam3_enabled=True,
+    # sam3_processor_kwargs= None,
+    verbose=True,
+    # print_fn=logger.info
+)
+
 sm_mgr.run_pipeline()
 results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
     image_path=image_path,
     pipeline="open_vocabulary_detection_segmentation",
-    input_text="person <and> audience <and> football",
-	bbox_conf_score_threshold=None, # .2
-	atomic_query=True,
-    verbose=True,
+    input_text="person <and> audience <and> football <and> advertisement <and> football pitch",
+    bbox_conf_score_threshold=.4,  # None,
+    atomic_query=True,
     plot_detections=True,
     return_values=True,
+    use_sam3=True, # set it to False to use Florence2 + Sam2
 )
+sm_mgr.print_results_as_table(results, keys=['bboxes_labels', 'bboxes_scores', 'bboxes'], prepend_msg='OVD')
+
+
 results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
     image_path=image_path,
     pipeline="object_detection_segmentation",
     bbox_conf_score_threshold=None, # .2
 	filter_labels=None, # ["person", "audience", "football"],
-    verbose=True,
     plot_detections=True,
     return_values=True,
 )
+sm_mgr.print_results_as_table(results, prepend_msg='OD')
+
 sm_mgr.run_pipeline(
     image_path=image_path,
     pipeline="region_proposal_segmentation"
@@ -91,14 +105,17 @@ sm_mgr.run_pipeline(
 
 
 # Using one line leveraging the __call__ method:
-Sam2Florence2MGR()(
+results, masks, masks_scores, masks_logits = Sam2Florence2MGR()(
     image_path=image_path,
     pipeline="open_vocabulary_detection_segmentation",
-    input_text="person <and> audience <and> football",
-	conf_score_threshold=.3,
-    verbose=True,
+    input_text="person <and> audience <and> football <and> advertisement <and> football pitch",
+    bbox_conf_score_threshold=.4,  # None,
+    atomic_query=True,
     plot_detections=True,
+    return_values=True,
+    use_sam3=True,
 )
+sm_mgr.print_results_as_table(results, prepend_msg='OVD')
 ```
 
 ## TODO:
