@@ -13,6 +13,7 @@ import torch
 from PIL import Image
 from tabulate import tabulate
 
+from grounded_sam_2.constants import DEFAULT_PLOT_CONFIG
 from grounded_sam_2.florence2.constants import BBOXES_LABEL, BBOX_SCORES_LABEL
 from grounded_sam_2.florence2.manager import Florence2MGR
 from grounded_sam_2.florence2.task_prompts import FlorenceTasks
@@ -70,8 +71,12 @@ class Sam2Florence2MGR:
             image_path="<path to image>",
             pipeline="open_vocabulary_detection_segmentation",
             input_text="person <and> crowd <and> football",
-            verbose=True,
+            bbox_conf_score_threshold=.4,  # None,
+            atomic_query=True,
             plot_detections=True,
+            plot_config={'show_labels': True, 'show_bboxes': True, 'show_masks': True},
+            return_values=True,
+            use_sam3=True,
         )
 
         # USING CALL METHOD
@@ -79,8 +84,12 @@ class Sam2Florence2MGR:
             image_path="<path to image>",
             pipeline="open_vocabulary_detection_segmentation",
             input_text="person <and> crowd <and> football",
-            verbose=True,
+            bbox_conf_score_threshold=.4,  # None,
+            atomic_query=True,
             plot_detections=True,
+            plot_config={'show_labels': True, 'show_bboxes': True, 'show_masks': True},
+            return_values=True,
+            use_sam3=True,
         )
     """
 
@@ -256,6 +265,7 @@ class Sam2Florence2MGR:
         bbox_conf_score_threshold: float | None = None,
         filter_labels: Iterable[str] = None,
         plot_detections: bool = True,
+        plot_config: dict | None = None,
         return_values: bool = False,
     ) -> tuple:
         """
@@ -268,6 +278,8 @@ class Sam2Florence2MGR:
                               Default None
             plot_detections <bool>: Whether or plot and save detections to disk.
                               Default True
+            plot_config   <dict>: Plot configuration.
+                              Default  {'show_labels': True, 'show_bboxes': True, 'show_masks': True}
             return_values <bool>: Whether or not return values.
                               Default False
 
@@ -285,7 +297,14 @@ class Sam2Florence2MGR:
         filter_labels = [] if filter_labels is None else filter_labels
         assert isinstance(filter_labels, (list, tuple, set)), type(filter_labels)
         assert isinstance(plot_detections, bool), type(plot_detections)
+        plot_config = DEFAULT_PLOT_CONFIG if plot_config is None else plot_config
+        assert isinstance(plot_config, dict), type(plot_config)
         assert isinstance(return_values, bool), type(return_values)
+
+        # updating plot_config ################################################
+        tmp = DEFAULT_PLOT_CONFIG.copy()
+        tmp.update(plot_config)
+        plot_config = tmp
 
         # NOTE: text_input must be None when calling object detection pipeline.
         text_input = None
@@ -371,16 +390,28 @@ class Sam2Florence2MGR:
                 class_id=class_ids
             )
 
-            box_annotator = sv.BoxAnnotator()
-            annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
+            annotated_frame = img.copy()
 
-            label_annotator = sv.LabelAnnotator()
-            annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-            cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_annotated_image.jpg"), annotated_frame)
+            if plot_config['show_bboxes']:
+                box_annotator = sv.BoxAnnotator()
+                annotated_frame = box_annotator.annotate(scene=annotated_frame, detections=detections)
 
-            mask_annotator = sv.MaskAnnotator()
-            annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
-            cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_det_image_with_mask.jpg"), annotated_frame)
+            if plot_config['show_labels']:
+                label_annotator = sv.LabelAnnotator()
+                annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
+            if plot_config['show_bboxes'] or plot_config['show_labels']:
+                cv2.imwrite(
+                    os.path.join(self.output_dir, "grounded_sam2_florence2_det_annotated_image.jpg"),
+                    annotated_frame
+                )
+
+            if plot_config['show_masks']:
+                mask_annotator = sv.MaskAnnotator()
+                annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
+                cv2.imwrite(
+                    os.path.join(self.output_dir, "grounded_sam2_florence2_det_image_with_mask.jpg"),
+                    annotated_frame
+                )
 
             self._print(f'Successfully save annotated image to "{self.output_dir}"')
 
@@ -1021,6 +1052,7 @@ class Sam2Florence2MGR:
         bbox_conf_score_threshold: float | None = None,
         atomic_query: bool = False,
         plot_detections: bool = True,
+        plot_config: dict | None = None,
         return_values: bool = False,
         use_sam3: bool = False
     ) -> tuple:
@@ -1039,6 +1071,8 @@ class Sam2Florence2MGR:
                               Default False
             plot_detections <bool>: Whether or plot and save detections to disk.
                               Default True
+            plot_config   <dict>: Plot configuration.
+                              Default  {'show_labels': True, 'show_bboxes': True, 'show_masks': True}
             return_values <bool>: Whether or not return values.
                               Default False
 
@@ -1058,8 +1092,15 @@ class Sam2Florence2MGR:
         if bbox_conf_score_threshold is not None:
             assert isinstance(bbox_conf_score_threshold, float), type(bbox_conf_score_threshold)
         assert isinstance(plot_detections, bool), type(plot_detections)
+        plot_config = DEFAULT_PLOT_CONFIG if plot_config is None else plot_config
+        assert isinstance(plot_config, dict), type(plot_config)
         assert isinstance(return_values, bool), type(return_values)
         assert isinstance(use_sam3, bool), type(use_sam3)
+
+        # updating plot_config ################################################
+        tmp = DEFAULT_PLOT_CONFIG.copy()
+        tmp.update(plot_config)
+        plot_config = tmp
 
         # Getting RGB PIL IMAGE ###############################################
         image = self.get_image(image_path)
@@ -1096,17 +1137,35 @@ class Sam2Florence2MGR:
                 class_id=class_ids
             )
 
-            box_annotator = sv.BoxAnnotator()
-            annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
+            annotated_frame = img.copy()
 
-            label_annotator = sv.LabelAnnotator()
-            annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-            cv2.imwrite(os.path.join(self.output_dir, "grounded_sam2_florence2_open_vocabulary_detection.jpg"), annotated_frame)
+            if plot_config['show_bboxes']:
+                box_annotator = sv.BoxAnnotator()
+                annotated_frame = box_annotator.annotate(scene=annotated_frame, detections=detections)
 
-            mask_annotator = sv.MaskAnnotator()
-            annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
-            cv2.imwrite(os.path.join(self.output_dir,
-                        "grounded_sam2_florence2_open_vocabulary_detection_with_mask.jpg"), annotated_frame)
+            if plot_config['show_labels']:
+                label_annotator = sv.LabelAnnotator()
+                annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
+
+            if plot_config['show_bboxes'] or plot_config['show_labels']:
+                cv2.imwrite(
+                    os.path.join(
+                        self.output_dir,
+                        "grounded_sam2_florence2_open_vocabulary_detection.jpg"
+                    ),
+                    annotated_frame
+                )
+
+            if plot_config['show_masks']:
+                mask_annotator = sv.MaskAnnotator()
+                annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
+                cv2.imwrite(
+                    os.path.join(
+                        self.output_dir,
+                        "grounded_sam2_florence2_open_vocabulary_detection_with_mask.jpg"
+                    ),
+                    annotated_frame
+                )
 
             self._print(f'Successfully save annotated image to "{self.output_dir}"')
 

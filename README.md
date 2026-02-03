@@ -82,6 +82,7 @@ results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
     bbox_conf_score_threshold=.4,  # None,
     atomic_query=True,
     plot_detections=True,
+    plot_config={'show_labels': True, 'show_bboxes': True, 'show_masks': True},
     return_values=True,
     use_sam3=True, # set it to False to use Florence2 + Sam2
 )
@@ -94,6 +95,7 @@ results, masks, masks_scores, masks_logits = sm_mgr.run_pipeline(
     bbox_conf_score_threshold=None, # .2
 	filter_labels=None, # ["person", "audience", "football"],
     plot_detections=True,
+    plot_config={'show_labels': True, 'show_bboxes': True, 'show_masks': True},
     return_values=True,
 )
 sm_mgr.print_results_as_table(results, prepend_msg='OD')
@@ -112,6 +114,7 @@ results, masks, masks_scores, masks_logits = Sam2Florence2MGR()(
     bbox_conf_score_threshold=.4,  # None,
     atomic_query=True,
     plot_detections=True,
+	plot_config={'show_labels': True, 'show_bboxes': True, 'show_masks': True},
     return_values=True,
     use_sam3=True,
 )
